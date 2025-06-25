@@ -6,9 +6,10 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
 </head>
 <body class="bg-light">
-    {% include 'navbar.html' %}
+    {% extends "navbar.html" %}
+    {% block content %}
     <div class="container mt-5">
-        <div class="card shadow p-4">
+        <div class="card shadow p-4 mb-4">
             <h2 class="mb-4">Editar Colaborador</h2>
             <form method="POST">
                 <div class="mb-3">
@@ -29,11 +30,21 @@
                 </div>
                 <div class="mb-3">
                     <label for="turno" class="form-label">Turno</label>
-                    <input type="text" class="form-control" id="turno" name="turno" value="{{ colaborador.turno }}">
+                    <select class="form-select" id="turno" name="turno" required>
+                        <option value="">Selecione</option>
+                        <option value="1º TURNO" {% if colaborador.turno == '1º TURNO' %}selected{% endif %}>1º TURNO</option>
+                        <option value="2º TURNO" {% if colaborador.turno == '2º TURNO' %}selected{% endif %}>2º TURNO</option>
+                        <option value="3º TURNO" {% if colaborador.turno == '3º TURNO' %}selected{% endif %}>3º TURNO</option>
+                        <option value="COMERCIAL" {% if colaborador.turno == 'COMERCIAL' %}selected{% endif %}>COMERCIAL</option>
+                    </select>
                 </div>
                 <div class="mb-3">
                     <label for="situacao" class="form-label">Situação</label>
-                    <input type="text" class="form-control" id="situacao" name="situacao" value="{{ colaborador.situacao }}">
+                    <select class="form-select" id="situacao" name="situacao" required>
+                        <option value="">Selecione</option>
+                        <option value="Ativo" {% if colaborador.situacao == 'Ativo' %}selected{% endif %}>Ativo</option>
+                        <option value="Inativo" {% if colaborador.situacao == 'Inativo' %}selected{% endif %}>Inativo</option>
+                    </select>
                 </div>
                 <div class="mb-3">
                     <label for="empresa_id" class="form-label">Empresa</label>
@@ -60,5 +71,6 @@
             </form>
         </div>
     </div>
+    {% endblock %}
 </body>
 </html>

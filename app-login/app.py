@@ -8,6 +8,7 @@ from datetime import datetime
 import io
 
 app = Flask(__name__)
+
 app.config['SECRET_KEY'] = 'admin_anderson_luft'
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///database.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
@@ -15,9 +16,8 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db.init_app(app)
 
 load_dotenv()
-# Ajuste para garantir que as variáveis estejam em maiúsculo
-MASTER_USER = os.getenv('MASTER_USER') or os.getenv('master_user')
-MASTER_PASS = os.getenv('MASTER_PASS') or os.getenv('master_pass')
+MASTER_USER = os.getenv('master_user')
+MASTER_PASS = os.getenv('master_pass')
 
 if not MASTER_USER or not MASTER_PASS:
     raise RuntimeError("MASTER_USER e MASTER_PASS precisam estar definidos no .env")
@@ -27,9 +27,7 @@ PERMISSIONS = [
     ('can_access_register_person', 'Acessa Cadastro Pessoa'),
     ('can_access_register_company', 'Acessa Cadastro Empresa'),
     ('can_access_colaboradores', 'Acessa Colaboradores'),
-    ('can_access_permissions', 'Acessa Permissões'),  # Adiciona permissão para tela de Permissões
-    # Adicione novas permissões aqui, exemplo:
-    # ('can_access_presenca', 'Acessa Presença'),
+    ('can_access_permissions', 'Acessa Permissões'),
 ]
 
 @app.route('/')
@@ -52,7 +50,7 @@ def login():
 
         if user and check_password_hash(user.password, password):
             session['user_id'] = user.id
-            session['company_id'] = company_id  # Salva empresa selecionada na sessão
+            session['company_id'] = company_id
             return redirect(url_for('index'))
         else:
             error = 'Usuário, senha ou empresa inválidos.'
@@ -175,14 +173,6 @@ def delete_company(company_id):
     db.session.commit()
     flash('Empresa excluída com sucesso!')
     return redirect(url_for('register_company'))
-
-@app.route('/search')
-def search():
-    if g.user is None:
-        return redirect(url_for('login'))
-    query = request.args.get('q', '')
-    # Aqui você pode adicionar lógica de busca
-    return render_template('search_results.html', query=query, user=g.user)
 
 @app.route('/logout')
 def logout():

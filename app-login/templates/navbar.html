@@ -1,46 +1,60 @@
-<nav class="navbar navbar-expand-lg navbar-dark bg-primary mb-4">
-  <div class="container">
-    <a class="navbar-brand" href="{{ url_for('index') }}">RH App</a>
-    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-      <span class="navbar-toggler-icon"></span>
-    </button>
-    <div class="collapse navbar-collapse" id="navbarNav">
-      <ul class="navbar-nav me-auto mb-2 mb-lg-0">
-        {% if user and has_permission(user, 'can_access_index') %}
-        <li class="nav-item">
-          <a class="nav-link" href="{{ url_for('index') }}">Início</a>
-        </li>
-        {% endif %}
-        {% if user and has_permission(user, 'can_access_register_person') %}
-        <li class="nav-item">
-          <a class="nav-link" href="{{ url_for('register_person') }}">Cadastrar Pessoa</a>
-        </li>
-        {% endif %}
-        {% if user and has_permission(user, 'can_access_register_company') %}
-        <li class="nav-item">
-          <a class="nav-link" href="{{ url_for('register_company') }}">Cadastrar Empresa</a>
-        </li>
-        {% endif %}
-        {% if user and has_permission(user, 'can_access_colaboradores') %}
-        <li class="nav-item">
-          <a class="nav-link" href="{{ url_for('colaboradores') }}">Colaboradores</a>
-        </li>
-        {% endif %}
-        {% if user and (user.role == 'admin' or user.role == 'master' or user.username == 'luftsolutions.extrema') %}
-        <li class="nav-item">
-          <a class="nav-link" href="{{ url_for('permissions') }}">Permissões</a>
-        </li>
-        {% endif %}
-      </ul>
-      <form class="d-flex me-3" action="{{ url_for('search') }}" method="get">
-        <input class="form-control me-2" type="text" name="q" placeholder="Pesquisar...">
-        <button class="btn btn-light" type="submit">Buscar</button>
-      </form>
-      <span class="navbar-text text-white">
-        {% if user %}
-          {{ user.username }} | <a href="{{ url_for('logout') }}" class="text-white text-decoration-underline">Sair</a>
-        {% endif %}
-      </span>
+<div class="d-flex">
+  <!-- Sidebar -->
+  <nav class="sidebar bg-primary text-white vh-100 p-2" style="width: 200px; min-width: 160px;">
+    <h4 class="mb-3">RH App</h4>
+    <input class="form-control mb-3" type="text" id="menuSearch" placeholder="Filtrar menu...">
+    <ul class="nav flex-column" id="sidebarMenu">
+      {% if user and has_permission(user, 'can_access_index') %}
+      <li class="nav-item mb-1">
+        <a class="nav-link text-white" href="{{ url_for('index') }}">Home</a>
+      </li>
+      {% endif %}
+      {% if user and has_permission(user, 'can_access_register_person') %}
+      <li class="nav-item mb-1">
+        <a class="nav-link text-white" href="{{ url_for('register_person') }}">Cadastrar Pessoa</a>
+      </li>
+      {% endif %}
+      {% if user and has_permission(user, 'can_access_register_company') %}
+      <li class="nav-item mb-1">
+        <a class="nav-link text-white" href="{{ url_for('register_company') }}">Cadastrar Empresa</a>
+      </li>
+      {% endif %}
+      {% if user and has_permission(user, 'can_access_colaboradores') %}
+      <li class="nav-item mb-1">
+        <a class="nav-link text-white" href="{{ url_for('colaboradores') }}">Colaboradores</a>
+      </li>
+      {% endif %}
+      {% if user and (user.role == 'admin' or user.role == 'master' or user.username == 'luftsolutions.extrema') %}
+      <li class="nav-item mb-1">
+        <a class="nav-link text-white" href="{{ url_for('permissions') }}">Permissões</a>
+      </li>
+      {% endif %}
+    </ul>
+    <div class="mt-auto pt-3 border-top border-light">
+      {% if user %}
+        <span>{{ user.username }}</span><br>
+        <a href="{{ url_for('logout') }}" class="text-white text-decoration-underline">Sair</a>
+      {% endif %}
     </div>
+  </nav>
+  <!-- /Sidebar -->
+
+  <!-- Conteúdo principal -->
+  <div class="flex-grow-1" style="min-height: 100vh; padding: 12px 8px 8px 8px;">
+    {% block content %}{% endblock %}
   </div>
-</nav>
+</div>
+<script>
+  // Filtro do menu lateral em tempo real
+  document.addEventListener('DOMContentLoaded', function() {
+    const input = document.getElementById('menuSearch');
+    const menu = document.getElementById('sidebarMenu');
+    input.addEventListener('input', function() {
+      const val = input.value.toLowerCase();
+      menu.querySelectorAll('li').forEach(function(li) {
+        const text = li.innerText.toLowerCase();
+        li.style.display = text.includes(val) ? '' : 'none';
+      });
+    });
+  });
+</script>
