@@ -426,8 +426,8 @@ if __name__ == '__main__':
     with app.app_context():
         db.create_all()
         # Cria empresa "luft" se não existir
-        if not Company.query.filter_by(name='luft').first():
-            db.session.add(Company(name='luft'))
+        if not Company.query.filter_by(name='Luft').first():
+            db.session.add(Company(name='Luft'))
             db.session.commit()
         # Cria ou atualiza o usuário master
         master = User.query.filter_by(username=MASTER_USER).first()
