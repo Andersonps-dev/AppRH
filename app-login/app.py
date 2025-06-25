@@ -299,7 +299,6 @@ def colaboradores():
         estados=[{'sigla': 'MG', 'nome': 'Minas Gerais'}, {'sigla': 'SP', 'nome': 'São Paulo'}]  # Exemplo, ajuste conforme necessário
     )
 
-# Exemplo de rota para exportar colaboradores para Excel
 @app.route('/export_colaboradores')
 def export_colaboradores():
     if g.user is None or not has_permission(g.user, 'can_access_colaboradores'):
@@ -347,19 +346,30 @@ def upload_colaboradores():
         flash('Nenhum arquivo enviado.')
         return redirect(url_for('colaboradores'))
     df = pd.read_excel(file)
-    for _, row in df.iterrows():
+    erros = []
+    for idx, row in df.iterrows():
+        empresa_nome = row.get('Empresa')
+        empresa = Company.query.filter_by(name=empresa_nome).first() if empresa_nome else None
+        if empresa_nome and not empresa:
+            erros.append(f"Linha {idx+2}: Empresa '{empresa_nome}' não encontrada.")
+            continue  # pula este colaborador
         colaborador = Colaborador(
             nome=row.get('Nome'),
-            departamento=row.get('Departamento'),
-            cpf=row.get('CPF'),
-            admissao=datetime.strptime(str(row.get('Admissao')), '%d/%m/%Y') if row.get('Admissao') else None,
             funcao=row.get('Função'),
-            empresa_id=Company.query.filter_by(name=row.get('Empresa')).first().id if row.get('Empresa') else None,
-            # Adicione outros campos conforme necessário
+            admissao=datetime.strptime(str(row.get('Admissao')), '%d/%m/%Y') if row.get('Admissao') else None,
+            setor=row.get('Setor') if 'Setor' in row else None,
+            turno=row.get('Turno') if 'Turno' in row else None,
+            empregador_id=None,  # ajuste se necessário
+            situacao=row.get('Situação') if 'Situação' in row else None,
+            empresa_id=empresa.id if empresa else None,
+            coordenador_id=None  # ajuste se necessário
         )
         db.session.add(colaborador)
     db.session.commit()
-    flash('Colaboradores importados com sucesso!')
+    if erros:
+        flash('Alguns colaboradores não foram importados:<br>' + '<br>'.join(erros))
+    else:
+        flash('Colaboradores importados com sucesso!')
     return redirect(url_for('colaboradores'))
 
 # Exemplo de rota para adicionar colaborador manualmente
@@ -398,8 +408,8 @@ if __name__ == '__main__':
     with app.app_context():
         db.create_all()
         # Cria empresa "Luft" se não existir
-        if not Company.query.filter_by(name='Luft').first():
-            db.session.add(Company(name='Luft'))
+        if not Company.query.filter_by(name='LUFT').first():
+            db.session.add(Company(name='LUFT'))
             db.session.commit()
         # Cria ou atualiza o usuário master
         master = User.query.filter_by(username=MASTER_USER).first()

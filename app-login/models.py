@@ -39,8 +39,8 @@ class Coordenador(db.Model):
 class Colaborador(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     nome = db.Column(db.String(150), nullable=False)
-    funcao = db.Column(db.String(100))
-    admissao = db.Column(db.Date, nullable=False)
+    funcao = db.Column(db.String(100))      
+    admissao = db.Column(db.String(30), nullable=False)
     setor = db.Column(db.String(100))
     turno = db.Column(db.String(30))
     empregador_id = db.Column(db.Integer, db.ForeignKey('empregador.id'), nullable=True)
