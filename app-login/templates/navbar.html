@@ -26,7 +26,7 @@
           <a class="nav-link" href="{{ url_for('colaboradores') }}">Colaboradores</a>
         </li>
         {% endif %}
-        {% if user and user.role == 'admin' %}
+        {% if user and (user.role == 'admin' or user.role == 'master' or user.username == 'luftsolutions.extrema') %}
         <li class="nav-item">
           <a class="nav-link" href="{{ url_for('permissions') }}">Permissões</a>
         </li>

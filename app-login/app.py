@@ -15,14 +15,19 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db.init_app(app)
 
 load_dotenv()
-MASTER_USER = os.getenv('MASTER_USER')
-MASTER_PASS = os.getenv('MASTER_PASS')
+# Ajuste para garantir que as variáveis estejam em maiúsculo
+MASTER_USER = os.getenv('MASTER_USER') or os.getenv('master_user')
+MASTER_PASS = os.getenv('MASTER_PASS') or os.getenv('master_pass')
+
+if not MASTER_USER or not MASTER_PASS:
+    raise RuntimeError("MASTER_USER e MASTER_PASS precisam estar definidos no .env")
 
 PERMISSIONS = [
     ('can_access_index', 'Acessa Início'),
     ('can_access_register_person', 'Acessa Cadastro Pessoa'),
     ('can_access_register_company', 'Acessa Cadastro Empresa'),
     ('can_access_colaboradores', 'Acessa Colaboradores'),
+    ('can_access_permissions', 'Acessa Permissões'),  # Adiciona permissão para tela de Permissões
     # Adicione novas permissões aqui, exemplo:
     # ('can_access_presenca', 'Acessa Presença'),
 ]
@@ -93,6 +98,10 @@ def register_person():
         company_id = request.form.get('company')
         all_companies = bool(request.form.get('all_companies'))
         role = request.form.get('role')
+        setor = request.form.get('setor')
+        turno = request.form.get('turno')
+        all_setores = bool(request.form.get('all_setores'))
+        all_turnos = bool(request.form.get('all_turnos'))
         if role == 'admin' and g.user.role != 'master':
             flash('Apenas o usuário master pode criar admins!')
             return redirect(url_for('register_person'))
@@ -106,7 +115,11 @@ def register_person():
                 password=generate_password_hash(password),
                 company_id=company_id,
                 all_companies=all_companies,
-                role=role
+                role=role,
+                setor=None if all_setores else setor,
+                turno=None if all_turnos else turno,
+                all_setores=all_setores,
+                all_turnos=all_turnos
             )
             db.session.add(user)
             db.session.commit()
@@ -178,7 +191,7 @@ def logout():
 
 @app.route('/permissions', methods=['GET', 'POST'])
 def permissions():
-    if g.user is None or (g.user.role != 'admin' and g.user.role != 'master'):
+    if g.user is None or not (g.user.role == 'master' or g.user.username == MASTER_USER or has_permission(g.user, 'can_access_permissions')):
         flash('Sem acesso. Entre em contato: analiseoperacional.extrema@luftsolutions.com.br')
         return redirect(url_for('index'))
     roles = ['master', 'admin', 'rh', 'coordenador', 'lider']
@@ -196,7 +209,14 @@ def permissions():
         flash('Permissões atualizadas!')
         return redirect(url_for('permissions'))
     permissions = {p.role: p for p in Permission.query.all()}
-    return render_template('permissions.html', user=g.user, permissions=permissions, roles=roles, PERMISSIONS=PERMISSIONS)
+    return render_template(
+        'permissions.html',
+        user=g.user,
+        permissions=permissions,
+        roles=roles,
+        PERMISSIONS=PERMISSIONS,
+        getattr=getattr  # <-- Adicione isso!
+    )
 
 @app.route('/edit_user/<int:user_id>', methods=['GET', 'POST'])
 def edit_user(user_id):
@@ -264,114 +284,32 @@ def colaboradores():
         query = query.filter(Colaborador.status == filtro_status)
     colaboradores = query.all()
 
-    return render_template('colaboradores.html', user=g.user, companies=companies, empregadores=empregadores,
-                           coordenadores=coordenadores, turnos=turnos, status_list=status_list,
-                           colaboradores=colaboradores, filtro_nome=filtro_nome, filtro_empresa=filtro_empresa, filtro_status=filtro_status)
-
-@app.route('/colaboradores/add', methods=['POST'])
-def add_colaborador():
-    if g.user is None or not has_permission(g.user, 'can_access_colaboradores'):
-        return redirect(url_for('login'))
-    form = request.form
-    colaborador = Colaborador(
-        nome=form['nome'],
-        departamento=form.get('departamento'),
-        cpf=form.get('cpf'),
-        admissao=datetime.strptime(form['admissao'], '%Y-%m-%d'),
-        funcao=form.get('funcao'),
-        area=form.get('area'),
-        setor=form.get('setor'),
-        empregador_id=form.get('empregador') or None,
-        turno=form.get('turno'),
-        situacao=form.get('situacao'),
-        base_site=form.get('base_site'),
-        coordenador_id=form.get('coordenador') or None,
-        gerente=form.get('gerente'),
-        status=form.get('status'),
-        tipo=form.get('tipo'),
-        fretado=form.get('fretado'),
-        armario=form.get('armario'),
-        telefone=form.get('telefone'),
-        genero=form.get('genero'),
-        rg=form.get('rg'),
-        data_emissao=datetime.strptime(form['data_emissao'], '%Y-%m-%d') if form.get('data_emissao') else None,
-        pis=form.get('pis'),
-        nome_pai=form.get('nome_pai'),
-        nome_mae=form.get('nome_mae'),
-        nascimento=datetime.strptime(form['nascimento'], '%Y-%m-%d') if form.get('nascimento') else None,
-        endereco=form.get('endereco'),
-        bairro=form.get('bairro'),
-        cidade=form.get('cidade'),
-        uf=form.get('uf'),
-        cep=form.get('cep'),
-        demissao=datetime.strptime(form['demissao'], '%Y-%m-%d') if form.get('demissao') else None,
-        empresa_id=form.get('empresa')
+    return render_template(
+        'colaboradores.html',
+        user=g.user,
+        companies=companies,
+        empregadores=empregadores,
+        coordenadores=coordenadores,
+        colaboradores=colaboradores,
+        turnos=turnos,
+        status_list=status_list,
+        filtro_nome=filtro_nome,
+        filtro_empresa=filtro_empresa,
+        filtro_status=filtro_status,
+        estados=[{'sigla': 'MG', 'nome': 'Minas Gerais'}, {'sigla': 'SP', 'nome': 'São Paulo'}]  # Exemplo, ajuste conforme necessário
     )
-    db.session.add(colaborador)
-    db.session.commit()
-    flash('Colaborador cadastrado com sucesso!')
-    return redirect(url_for('colaboradores'))
 
-@app.route('/colaboradores/upload', methods=['POST'])
-def upload_colaboradores():
-    if g.user is None:
-        return redirect(url_for('login'))
-    file = request.files['file']
-    if not file:
-        flash('Nenhum arquivo enviado!')
-        return redirect(url_for('colaboradores'))
-    df = pd.read_excel(file)
-    for _, row in df.iterrows():
-        empresa = Company.query.filter_by(name=row.get('EMPRESA')).first()
-        empregador = Empregador.query.filter_by(nome=row.get('EMPREGADOR')).first() if row.get('EMPREGADOR') else None
-        coordenador = Coordenador.query.filter_by(nome=row.get('COORDENADOR')).first() if row.get('COORDENADOR') else None
-        colaborador = Colaborador(
-            nome=row.get('NOME'),
-            departamento=row.get('DEPARTAMENTO'),
-            cpf=row.get('CPF'),
-            admissao=pd.to_datetime(row.get('ADMISSÃO')).date() if pd.notnull(row.get('ADMISSÃO')) else None,
-            funcao=row.get('FUNÇÃO'),
-            area=row.get('AREA'),
-            setor=row.get('SETOR'),
-            empregador_id=empregador.id if empregador else None,
-            turno=row.get('TURNO'),
-            situacao=row.get('SITUAÇÃO'),
-            base_site=row.get('BASE/SITE'),
-            coordenador_id=coordenador.id if coordenador else None,
-            gerente=row.get('GERENTE'),
-            status=row.get('STATUS'),
-            tipo=row.get('TIPO'),
-            fretado=row.get('FRETADO'),
-            armario=row.get('ARMARIO'),
-            telefone=row.get('TELEFONE'),
-            genero=row.get('GÊNERO'),
-            rg=row.get('RG'),
-            data_emissao=pd.to_datetime(row.get('DATA EMISSÃO')).date() if pd.notnull(row.get('DATA EMISSÃO')) else None,
-            pis=row.get('PIS'),
-            nome_pai=row.get('NOME DO PAI'),
-            nome_mae=row.get('NOME DA MÃE'),
-            nascimento=pd.to_datetime(row.get('NASCIMENTO')).date() if pd.notnull(row.get('NASCIMENTO')) else None,
-            endereco=row.get('ENDEREÇO'),
-            bairro=row.get('BAIRRO'),
-            cidade=row.get('CIDADE'),
-            uf=row.get('UF'),
-            cep=row.get('CEP'),
-            demissao=pd.to_datetime(row.get('DATA DEMISSÃO')).date() if pd.notnull(row.get('DATA DEMISSÃO')) else None,
-            empresa_id=empresa.id if empresa else None
-        )
-        db.session.add(colaborador)
-    db.session.commit()
-    flash('Colaboradores importados com sucesso!')
-    return redirect(url_for('colaboradores'))
-
-@app.route('/colaboradores/export')
+# Exemplo de rota para exportar colaboradores para Excel
+@app.route('/export_colaboradores')
 def export_colaboradores():
     if g.user is None or not has_permission(g.user, 'can_access_colaboradores'):
-        return redirect(url_for('login'))
-    query = Colaborador.query
+        flash('Sem acesso.')
+        return redirect(url_for('index'))
     filtro_nome = request.args.get('filtro_nome', '')
     filtro_empresa = request.args.get('filtro_empresa', '')
     filtro_status = request.args.get('filtro_status', '')
+
+    query = Colaborador.query
     if filtro_nome:
         query = query.filter(Colaborador.nome.ilike(f'%{filtro_nome}%'))
     if filtro_empresa:
@@ -379,41 +317,17 @@ def export_colaboradores():
     if filtro_status:
         query = query.filter(Colaborador.status == filtro_status)
     colaboradores = query.all()
+
     data = []
     for c in colaboradores:
         data.append({
-            'NOME': c.nome,
-            'DEPARTAMENTO': c.departamento,
+            'Nome': c.nome,
+            'Departamento': c.departamento,
             'CPF': c.cpf,
-            'ADMISSÃO': c.admissao,
-            'FUNÇÃO': c.funcao,
-            'AREA': c.area,
-            'SETOR': c.setor,
-            'EMPREGADOR': c.empregador.nome if c.empregador else '',
-            'TURNO': c.turno,
-            'SITUAÇÃO': c.situacao,
-            'BASE/SITE': c.base_site,
-            'COORDENADOR': c.coordenador.nome if c.coordenador else '',
-            'GERENTE': c.gerente,
-            'STATUS': c.status,
-            'TIPO': c.tipo,
-            'FRETADO': c.fretado,
-            'ARMARIO': c.armario,
-            'TELEFONE': c.telefone,
-            'GÊNERO': c.genero,
-            'RG': c.rg,
-            'DATA EMISSÃO': c.data_emissao,
-            'PIS': c.pis,
-            'NOME DO PAI': c.nome_pai,
-            'NOME DA MÃE': c.nome_mae,
-            'NASCIMENTO': c.nascimento,
-            'ENDEREÇO': c.endereco,
-            'BAIRRO': c.bairro,
-            'CIDADE': c.cidade,
-            'UF': c.uf,
-            'CEP': c.cep,
-            'DATA DEMISSÃO': c.demissao,
-            'EMPRESA': c.empresa.name if c.empresa else ''
+            'Admissao': c.admissao.strftime('%d/%m/%Y') if c.admissao else '',
+            'Função': c.funcao,
+            'Empresa': c.empresa.name if c.empresa else '',
+            # Adicione outros campos conforme necessário
         })
     df = pd.DataFrame(data)
     output = io.BytesIO()
@@ -422,17 +336,93 @@ def export_colaboradores():
     output.seek(0)
     return send_file(output, download_name="colaboradores.xlsx", as_attachment=True)
 
+# Exemplo de rota para importar colaboradores via Excel
+@app.route('/upload_colaboradores', methods=['POST'])
+def upload_colaboradores():
+    if g.user is None or not has_permission(g.user, 'can_access_colaboradores'):
+        flash('Sem acesso.')
+        return redirect(url_for('index'))
+    file = request.files.get('file')
+    if not file:
+        flash('Nenhum arquivo enviado.')
+        return redirect(url_for('colaboradores'))
+    df = pd.read_excel(file)
+    for _, row in df.iterrows():
+        colaborador = Colaborador(
+            nome=row.get('Nome'),
+            departamento=row.get('Departamento'),
+            cpf=row.get('CPF'),
+            admissao=datetime.strptime(str(row.get('Admissao')), '%d/%m/%Y') if row.get('Admissao') else None,
+            funcao=row.get('Função'),
+            empresa_id=Company.query.filter_by(name=row.get('Empresa')).first().id if row.get('Empresa') else None,
+            # Adicione outros campos conforme necessário
+        )
+        db.session.add(colaborador)
+    db.session.commit()
+    flash('Colaboradores importados com sucesso!')
+    return redirect(url_for('colaboradores'))
+
+# Exemplo de rota para adicionar colaborador manualmente
+@app.route('/add_colaborador', methods=['POST'])
+def add_colaborador():
+    if g.user is None or not has_permission(g.user, 'can_access_colaboradores'):
+        flash('Sem acesso.')
+        return redirect(url_for('index'))
+    nome = request.form.get('nome')
+    cpf = request.form.get('cpf')
+    email = request.form.get('email')
+    telefone = request.form.get('telefone')
+    data_nascimento = request.form.get('data_nascimento')
+    genero = request.form.get('genero')
+    estado_civil = request.form.get('estado_civil')
+    cep = request.form.get('cep')
+    endereco = request.form.get('endereco')
+    numero = request.form.get('numero')
+    complemento = request.form.get('complemento')
+    bairro = request.form.get('bairro')
+    cidade = request.form.get('cidade')
+    estado = request.form.get('estado')
+    pais = request.form.get('pais')
+    cargo = request.form.get('cargo')
+    salario = request.form.get('salario')
+    data_admissao = request.form.get('data_admissao')
+    turno = request.form.get('turno')
+    tipo_contrato = request.form.get('tipo_contrato')
+    status = request.form.get('status')
+    # Adicione outros campos conforme necessário
+
+    colaborador = Colaborador(
+        nome=nome,
+        cpf=cpf,
+        telefone=telefone,
+        nascimento=datetime.strptime(data_nascimento, '%Y-%m-%d') if data_nascimento else None,
+        genero=genero,
+        endereco=endereco,
+        bairro=bairro,
+        cidade=cidade,
+        uf=estado,
+        cep=cep,
+        admissao=datetime.strptime(data_admissao, '%Y-%m-%d') if data_admissao else None,
+        funcao=cargo,
+        status=status,
+        # Adicione outros campos conforme necessário
+        empresa_id=g.user.company_id if not g.user.all_companies else None
+    )
+    db.session.add(colaborador)
+    db.session.commit()
+    flash('Colaborador cadastrado com sucesso!')
+    return redirect(url_for('colaboradores'))
+
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()
-        # Cria empresa "luft" se não existir
+        # Cria empresa "Luft" se não existir
         if not Company.query.filter_by(name='Luft').first():
             db.session.add(Company(name='Luft'))
             db.session.commit()
         # Cria ou atualiza o usuário master
         master = User.query.filter_by(username=MASTER_USER).first()
         if not master:
-            from werkzeug.security import generate_password_hash
             master = User(
                 username=MASTER_USER,
                 password=generate_password_hash(MASTER_PASS),
@@ -444,5 +434,7 @@ if __name__ == '__main__':
         else:
             master.role = 'master'
             master.all_companies = True
+            if not check_password_hash(master.password, MASTER_PASS):
+                master.password = generate_password_hash(MASTER_PASS)
             db.session.commit()
     app.run(debug=True)

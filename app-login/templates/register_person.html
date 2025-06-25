@@ -38,6 +38,32 @@
                         <option value="lider">Líder</option>
                     </select>
                 </div>
+                <div class="mb-3">
+                    <label for="setor" class="form-label">Setor:</label>
+                    <input type="text" id="setor" name="setor" class="form-control">
+                    <div class="form-check mt-1">
+                        <input class="form-check-input" type="checkbox" value="1" id="all_setores" name="all_setores">
+                        <label class="form-check-label" for="all_setores">
+                            Todos os setores
+                        </label>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label for="turno" class="form-label">Turno:</label>
+                    <select id="turno" name="turno" class="form-select">
+                        <option value="">Selecione o turno</option>
+                        <option value="1º TURNO">1º TURNO</option>
+                        <option value="2º TURNO">2º TURNO</option>
+                        <option value="3º TURNO">3º TURNO</option>
+                        <option value="COMERCIAL">COMERCIAL</option>
+                    </select>
+                    <div class="form-check mt-1">
+                        <input class="form-check-input" type="checkbox" value="1" id="all_turnos" name="all_turnos">
+                        <label class="form-check-label" for="all_turnos">
+                            Todos os turnos
+                        </label>
+                    </div>
+                </div>
                 <div class="form-check mb-3">
                     <input class="form-check-input" type="checkbox" value="1" id="all_companies" name="all_companies">
                     <label class="form-check-label" for="all_companies">
@@ -65,6 +91,10 @@
                         <th>Empresa</th>
                         <th>Todas Empresas</th>
                         <th>Cargo</th>
+                        <th>Setor</th>
+                        <th>Todos Setores</th>
+                        <th>Turno</th>
+                        <th>Todos Turnos</th>
                         <th>Ações</th>
                     </tr>
                 </thead>
@@ -75,6 +105,10 @@
                         <td>{{ u.company.name if u.company else '-' }}</td>
                         <td>{{ 'Sim' if u.all_companies else 'Não' }}</td>
                         <td>{{ u.role }}</td>
+                        <td>{{ u.setor or '-' }}</td>
+                        <td>{{ 'Sim' if u.all_setores else 'Não' }}</td>
+                        <td>{{ u.turno or '-' }}</td>
+                        <td>{{ 'Sim' if u.all_turnos else 'Não' }}</td>
                         <td>
                             <a href="{{ url_for('edit_user', user_id=u.id) }}" class="btn btn-sm btn-primary">Editar</a>
                             <a href="{{ url_for('delete_user', user_id=u.id) }}" class="btn btn-sm btn-danger" onclick="return confirm('Tem certeza?')">Excluir</a>

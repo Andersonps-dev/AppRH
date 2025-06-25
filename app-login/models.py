@@ -12,8 +12,12 @@ class User(db.Model):
     username = db.Column(db.String(150), unique=True, nullable=False)
     password = db.Column(db.String(150), nullable=False)
     company_id = db.Column(db.Integer, db.ForeignKey('company.id'), nullable=True)
-    role = db.Column(db.String(50), nullable=False, default='user')  # admin, rh, coordenador, lider
+    role = db.Column(db.String(50), nullable=False, default='user')
     all_companies = db.Column(db.Boolean, default=False)
+    setor = db.Column(db.String(100), nullable=True)  # Novo campo
+    turno = db.Column(db.String(50), nullable=True)   # Novo campo
+    all_setores = db.Column(db.Boolean, default=False) # Novo campo
+    all_turnos = db.Column(db.Boolean, default=False)  # Novo campo
 
 class Permission(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -22,8 +26,7 @@ class Permission(db.Model):
     can_access_register_person = db.Column(db.Boolean, default=False)
     can_access_register_company = db.Column(db.Boolean, default=False)
     can_access_colaboradores = db.Column(db.Boolean, default=False)
-    # Para nova tela:
-    # can_access_presenca = db.Column(db.Boolean, default=False)
+    can_access_permissions = db.Column(db.Boolean, default=False)
 
 class Empregador(db.Model):
     id = db.Column(db.Integer, primary_key=True)
