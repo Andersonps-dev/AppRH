@@ -1,10 +1,11 @@
-from flask import Flask, render_template, request, redirect, url_for, session, flash, g
+from flask import Flask, render_template, request, redirect, url_for, session, flash, g, send_file
 from werkzeug.security import generate_password_hash, check_password_hash
 from models import db, User, Company, Permission, Empregador, Coordenador, Colaborador
 import os
 from dotenv import load_dotenv
 import pandas as pd
 from datetime import datetime
+import io
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'admin_anderson_luft'
@@ -235,47 +236,81 @@ def delete_user(user_id):
     flash('Usuário excluído com sucesso!')
     return redirect(url_for('register_person'))
 
-@app.route('/colaboradores', methods=['GET', 'POST'])
+@app.route('/colaboradores', methods=['GET'])
 def colaboradores():
     if g.user is None:
         return redirect(url_for('login'))
     if not has_permission(g.user, 'can_access_colaboradores'):
         flash('Sem acesso. Entre em contato: analiseoperacional.extrema@luftsolutions.com.br')
         return redirect(url_for('index'))
+
     companies = Company.query.all()
     empregadores = Empregador.query.all()
     coordenadores = Coordenador.query.all()
     turnos = ['1º TURNO', '2º TURNO', 'COMERCIAL', '3º TURNO']
     status_list = ['Ativo', 'Inativo']
 
-    if request.method == 'POST':
-        nome = request.form['nome']
-        empresa_id = request.form['empresa']
-        admissao = datetime.strptime(request.form['admissao'], '%Y-%m-%d')
-        demissao = request.form['demissao']
-        demissao = datetime.strptime(demissao, '%Y-%m-%d') if demissao else None
-        empregador_id = request.form['empregador']
-        turno = request.form['turno']
-        coordenador_id = request.form['coordenador']
-        status = request.form['status']
-        colaborador = Colaborador(
-            nome=nome,
-            empresa_id=empresa_id,
-            admissao=admissao,
-            demissao=demissao,
-            empregador_id=empregador_id,
-            turno=turno,
-            coordenador_id=coordenador_id,
-            status=status
-        )
-        db.session.add(colaborador)
-        db.session.commit()
-        flash('Colaborador cadastrado com sucesso!')
-        return redirect(url_for('colaboradores'))
+    # Filtros
+    filtro_nome = request.args.get('filtro_nome', '')
+    filtro_empresa = request.args.get('filtro_empresa', '')
+    filtro_status = request.args.get('filtro_status', '')
 
-    colaboradores = Colaborador.query.all()
+    query = Colaborador.query
+    if filtro_nome:
+        query = query.filter(Colaborador.nome.ilike(f'%{filtro_nome}%'))
+    if filtro_empresa:
+        query = query.filter(Colaborador.empresa_id == filtro_empresa)
+    if filtro_status:
+        query = query.filter(Colaborador.status == filtro_status)
+    colaboradores = query.all()
+
     return render_template('colaboradores.html', user=g.user, companies=companies, empregadores=empregadores,
-                           coordenadores=coordenadores, turnos=turnos, status_list=status_list, colaboradores=colaboradores)
+                           coordenadores=coordenadores, turnos=turnos, status_list=status_list,
+                           colaboradores=colaboradores, filtro_nome=filtro_nome, filtro_empresa=filtro_empresa, filtro_status=filtro_status)
+
+@app.route('/colaboradores/add', methods=['POST'])
+def add_colaborador():
+    if g.user is None or not has_permission(g.user, 'can_access_colaboradores'):
+        return redirect(url_for('login'))
+    form = request.form
+    colaborador = Colaborador(
+        nome=form['nome'],
+        departamento=form.get('departamento'),
+        cpf=form.get('cpf'),
+        admissao=datetime.strptime(form['admissao'], '%Y-%m-%d'),
+        funcao=form.get('funcao'),
+        area=form.get('area'),
+        setor=form.get('setor'),
+        empregador_id=form.get('empregador') or None,
+        turno=form.get('turno'),
+        situacao=form.get('situacao'),
+        base_site=form.get('base_site'),
+        coordenador_id=form.get('coordenador') or None,
+        gerente=form.get('gerente'),
+        status=form.get('status'),
+        tipo=form.get('tipo'),
+        fretado=form.get('fretado'),
+        armario=form.get('armario'),
+        telefone=form.get('telefone'),
+        genero=form.get('genero'),
+        rg=form.get('rg'),
+        data_emissao=datetime.strptime(form['data_emissao'], '%Y-%m-%d') if form.get('data_emissao') else None,
+        pis=form.get('pis'),
+        nome_pai=form.get('nome_pai'),
+        nome_mae=form.get('nome_mae'),
+        nascimento=datetime.strptime(form['nascimento'], '%Y-%m-%d') if form.get('nascimento') else None,
+        endereco=form.get('endereco'),
+        bairro=form.get('bairro'),
+        cidade=form.get('cidade'),
+        uf=form.get('uf'),
+        cep=form.get('cep'),
+        demissao=datetime.strptime(form['demissao'], '%Y-%m-%d') if form.get('demissao') else None,
+        empresa_id=form.get('empresa')
+    )
+    db.session.add(colaborador)
+    db.session.commit()
+    flash('Colaborador cadastrado com sucesso!')
+    return redirect(url_for('colaboradores'))
 
 @app.route('/colaboradores/upload', methods=['POST'])
 def upload_colaboradores():
@@ -287,91 +322,105 @@ def upload_colaboradores():
         return redirect(url_for('colaboradores'))
     df = pd.read_excel(file)
     for _, row in df.iterrows():
-        empresa = Company.query.filter_by(name=row['EMPRESA']).first()
-        empregador = Empregador.query.filter_by(nome=row['EMPREGADOR']).first()
-        coordenador = Coordenador.query.filter_by(nome=row['COORDENADOR']).first()
-        if not empresa or not empregador or not coordenador:
-            continue  # Pula se não encontrar referência
-        admissao = pd.to_datetime(row['ADMISSÃO']).date()
-        demissao = pd.to_datetime(row['DEMISSÃO']).date() if pd.notnull(row['DEMISSÃO']) else None
+        empresa = Company.query.filter_by(name=row.get('EMPRESA')).first()
+        empregador = Empregador.query.filter_by(nome=row.get('EMPREGADOR')).first() if row.get('EMPREGADOR') else None
+        coordenador = Coordenador.query.filter_by(nome=row.get('COORDENADOR')).first() if row.get('COORDENADOR') else None
         colaborador = Colaborador(
-            nome=row['NOME'],
-            empresa_id=empresa.id,
-            admissao=admissao,
-            demissao=demissao,
-            empregador_id=empregador.id,
-            turno=row['TURNO'],
-            coordenador_id=coordenador.id,
-            status=row['STATUS']
+            nome=row.get('NOME'),
+            departamento=row.get('DEPARTAMENTO'),
+            cpf=row.get('CPF'),
+            admissao=pd.to_datetime(row.get('ADMISSÃO')).date() if pd.notnull(row.get('ADMISSÃO')) else None,
+            funcao=row.get('FUNÇÃO'),
+            area=row.get('AREA'),
+            setor=row.get('SETOR'),
+            empregador_id=empregador.id if empregador else None,
+            turno=row.get('TURNO'),
+            situacao=row.get('SITUAÇÃO'),
+            base_site=row.get('BASE/SITE'),
+            coordenador_id=coordenador.id if coordenador else None,
+            gerente=row.get('GERENTE'),
+            status=row.get('STATUS'),
+            tipo=row.get('TIPO'),
+            fretado=row.get('FRETADO'),
+            armario=row.get('ARMARIO'),
+            telefone=row.get('TELEFONE'),
+            genero=row.get('GÊNERO'),
+            rg=row.get('RG'),
+            data_emissao=pd.to_datetime(row.get('DATA EMISSÃO')).date() if pd.notnull(row.get('DATA EMISSÃO')) else None,
+            pis=row.get('PIS'),
+            nome_pai=row.get('NOME DO PAI'),
+            nome_mae=row.get('NOME DA MÃE'),
+            nascimento=pd.to_datetime(row.get('NASCIMENTO')).date() if pd.notnull(row.get('NASCIMENTO')) else None,
+            endereco=row.get('ENDEREÇO'),
+            bairro=row.get('BAIRRO'),
+            cidade=row.get('CIDADE'),
+            uf=row.get('UF'),
+            cep=row.get('CEP'),
+            demissao=pd.to_datetime(row.get('DATA DEMISSÃO')).date() if pd.notnull(row.get('DATA DEMISSÃO')) else None,
+            empresa_id=empresa.id if empresa else None
         )
         db.session.add(colaborador)
     db.session.commit()
     flash('Colaboradores importados com sucesso!')
     return redirect(url_for('colaboradores'))
 
-@app.route('/empregadores', methods=['GET', 'POST'])
-def empregadores():
-    if g.user is None:
+@app.route('/colaboradores/export')
+def export_colaboradores():
+    if g.user is None or not has_permission(g.user, 'can_access_colaboradores'):
         return redirect(url_for('login'))
-    if request.method == 'POST':
-        nome = request.form['nome']
-        if not Empregador.query.filter_by(nome=nome).first():
-            db.session.add(Empregador(nome=nome))
-            db.session.commit()
-            flash('Empregador cadastrado!')
-        return redirect(url_for('empregadores'))
-    empregadores = Empregador.query.all()
-    return render_template('empregadores.html', user=g.user, empregadores=empregadores)
-
-@app.route('/coordenadores', methods=['GET', 'POST'])
-def coordenadores():
-    if g.user is None:
-        return redirect(url_for('login'))
-    if request.method == 'POST':
-        nome = request.form['nome']
-        if not Coordenador.query.filter_by(nome=nome).first():
-            db.session.add(Coordenador(nome=nome))
-            db.session.commit()
-            flash('Coordenador cadastrado!')
-        return redirect(url_for('coordenadores'))
-    coordenadores = Coordenador.query.all()
-    return render_template('coordenadores.html', user=g.user, coordenadores=coordenadores)
-
-@app.route('/colaboradores/edit/<int:id>', methods=['GET', 'POST'])
-def edit_colaborador(id):
-    if g.user is None:
-        return redirect(url_for('login'))
-    colaborador = Colaborador.query.get_or_404(id)
-    companies = Company.query.all()
-    empregadores = Empregador.query.all()
-    coordenadores = Coordenador.query.all()
-    turnos = ['1º TURNO', '2º TURNO', 'COMERCIAL', '3º TURNO']
-    status_list = ['Ativo', 'Inativo']
-    if request.method == 'POST':
-        colaborador.nome = request.form['nome']
-        colaborador.empresa_id = request.form['empresa']
-        colaborador.admissao = datetime.strptime(request.form['admissao'], '%Y-%m-%d')
-        demissao = request.form['demissao']
-        colaborador.demissao = datetime.strptime(demissao, '%Y-%m-%d') if demissao else None
-        colaborador.empregador_id = request.form['empregador']
-        colaborador.turno = request.form['turno']
-        colaborador.coordenador_id = request.form['coordenador']
-        colaborador.status = request.form['status']
-        db.session.commit()
-        flash('Colaborador atualizado!')
-        return redirect(url_for('colaboradores'))
-    return render_template('edit_colaborador.html', user=g.user, colaborador=colaborador, companies=companies,
-                           empregadores=empregadores, coordenadores=coordenadores, turnos=turnos, status_list=status_list)
-
-@app.route('/colaboradores/delete/<int:id>')
-def delete_colaborador(id):
-    if g.user is None:
-        return redirect(url_for('login'))
-    colaborador = Colaborador.query.get_or_404(id)
-    db.session.delete(colaborador)
-    db.session.commit()
-    flash('Colaborador excluído!')
-    return redirect(url_for('colaboradores'))
+    query = Colaborador.query
+    filtro_nome = request.args.get('filtro_nome', '')
+    filtro_empresa = request.args.get('filtro_empresa', '')
+    filtro_status = request.args.get('filtro_status', '')
+    if filtro_nome:
+        query = query.filter(Colaborador.nome.ilike(f'%{filtro_nome}%'))
+    if filtro_empresa:
+        query = query.filter(Colaborador.empresa_id == filtro_empresa)
+    if filtro_status:
+        query = query.filter(Colaborador.status == filtro_status)
+    colaboradores = query.all()
+    data = []
+    for c in colaboradores:
+        data.append({
+            'NOME': c.nome,
+            'DEPARTAMENTO': c.departamento,
+            'CPF': c.cpf,
+            'ADMISSÃO': c.admissao,
+            'FUNÇÃO': c.funcao,
+            'AREA': c.area,
+            'SETOR': c.setor,
+            'EMPREGADOR': c.empregador.nome if c.empregador else '',
+            'TURNO': c.turno,
+            'SITUAÇÃO': c.situacao,
+            'BASE/SITE': c.base_site,
+            'COORDENADOR': c.coordenador.nome if c.coordenador else '',
+            'GERENTE': c.gerente,
+            'STATUS': c.status,
+            'TIPO': c.tipo,
+            'FRETADO': c.fretado,
+            'ARMARIO': c.armario,
+            'TELEFONE': c.telefone,
+            'GÊNERO': c.genero,
+            'RG': c.rg,
+            'DATA EMISSÃO': c.data_emissao,
+            'PIS': c.pis,
+            'NOME DO PAI': c.nome_pai,
+            'NOME DA MÃE': c.nome_mae,
+            'NASCIMENTO': c.nascimento,
+            'ENDEREÇO': c.endereco,
+            'BAIRRO': c.bairro,
+            'CIDADE': c.cidade,
+            'UF': c.uf,
+            'CEP': c.cep,
+            'DATA DEMISSÃO': c.demissao,
+            'EMPRESA': c.empresa.name if c.empresa else ''
+        })
+    df = pd.DataFrame(data)
+    output = io.BytesIO()
+    with pd.ExcelWriter(output, engine='openpyxl') as writer:
+        df.to_excel(writer, index=False)
+    output.seek(0)
+    return send_file(output, download_name="colaboradores.xlsx", as_attachment=True)
 
 if __name__ == '__main__':
     with app.app_context():
