@@ -1,6 +1,6 @@
 from flask import Flask, render_template, request, redirect, url_for, session, flash, g, send_file
 from werkzeug.security import generate_password_hash, check_password_hash
-from models import db, User, Company, Permission, Empregador, Coordenador, Colaborador
+from models import db, User, Company, Permission, Colaborador
 import os
 from dotenv import load_dotenv
 import pandas as pd
@@ -265,8 +265,6 @@ def colaboradores():
         return redirect(url_for('index'))
 
     companies = Company.query.all()
-    empregadores = Empregador.query.all()
-    coordenadores = Coordenador.query.all()
     turnos = ['1º TURNO', '2º TURNO', 'COMERCIAL', '3º TURNO']
     status_list = ['Ativo', 'Inativo']
 
@@ -352,23 +350,21 @@ def upload_colaboradores():
         flash('Nenhum arquivo enviado.')
         return redirect(url_for('colaboradores'))
     df = pd.read_excel(file)
-    erros = []
+    empresas_nao_cadastradas = set()
     for idx, row in df.iterrows():
         empresa_nome = row.get('Empresa')
         empresa = Company.query.filter_by(name=empresa_nome).first() if empresa_nome else None
         if empresa_nome and not empresa:
-            erros.append(f"Linha {idx+2}: Empresa '{empresa_nome}' não encontrada.")
+            empresas_nao_cadastradas.add(empresa_nome)
             continue
 
         cpf = str(row.get('Cpf')).strip() if row.get('Cpf') else None
         if not cpf:
-            erros.append(f"Linha {idx+2}: CPF não preenchido.")
             continue
 
         admissao_val = row.get('Admissão')
         admissao = None
         if pd.isna(admissao_val) or admissao_val is None or str(admissao_val).strip() == '':
-            erros.append(f"Linha {idx+2}: Data de admissão não preenchida.")
             continue
         try:
             if isinstance(admissao_val, (pd.Timestamp, datetime)):
@@ -381,7 +377,6 @@ def upload_colaboradores():
                     raise ValueError
                 admissao = admissao.strftime('%d/%m/%Y')
         except Exception:
-            erros.append(f"Linha {idx+2}: Data de admissão inválida.")
             continue
 
         colaborador = Colaborador.query.filter_by(cpf=cpf).first()
@@ -410,8 +405,9 @@ def upload_colaboradores():
             )
             db.session.add(colaborador)
     db.session.commit()
-    if erros:
-        flash('Alguns colaboradores não foram importados:<br>' + '<br>'.join(erros))
+    if empresas_nao_cadastradas:
+        empresas_str = ', '.join(sorted(empresas_nao_cadastradas))
+        flash(f'Falta cadastrar as seguintes empresas antes de importar: {empresas_str}')
     else:
         flash('Colaboradores importados com sucesso!')
     return redirect(url_for('colaboradores'))
