@@ -369,44 +369,25 @@ def add_colaborador():
         flash('Sem acesso.')
         return redirect(url_for('index'))
     nome = request.form.get('nome')
-    cpf = request.form.get('cpf')
-    email = request.form.get('email')
-    telefone = request.form.get('telefone')
-    data_nascimento = request.form.get('data_nascimento')
-    genero = request.form.get('genero')
-    estado_civil = request.form.get('estado_civil')
-    cep = request.form.get('cep')
-    endereco = request.form.get('endereco')
-    numero = request.form.get('numero')
-    complemento = request.form.get('complemento')
-    bairro = request.form.get('bairro')
-    cidade = request.form.get('cidade')
-    estado = request.form.get('estado')
-    pais = request.form.get('pais')
-    cargo = request.form.get('cargo')
-    salario = request.form.get('salario')
-    data_admissao = request.form.get('data_admissao')
+    funcao = request.form.get('cargo')
+    admissao = request.form.get('data_admissao')
+    setor = request.form.get('setor')
     turno = request.form.get('turno')
-    tipo_contrato = request.form.get('tipo_contrato')
-    status = request.form.get('status')
-    # Adicione outros campos conforme necessário
+    empregador_id = request.form.get('empregador_id')
+    situacao = request.form.get('status')
+    empresa_id = g.user.company_id if not g.user.all_companies else None
+    coordenador_id = request.form.get('coordenador_id')
 
     colaborador = Colaborador(
         nome=nome,
-        cpf=cpf,
-        telefone=telefone,
-        nascimento=datetime.strptime(data_nascimento, '%Y-%m-%d') if data_nascimento else None,
-        genero=genero,
-        endereco=endereco,
-        bairro=bairro,
-        cidade=cidade,
-        uf=estado,
-        cep=cep,
-        admissao=datetime.strptime(data_admissao, '%Y-%m-%d') if data_admissao else None,
-        funcao=cargo,
-        status=status,
-        # Adicione outros campos conforme necessário
-        empresa_id=g.user.company_id if not g.user.all_companies else None
+        funcao=funcao,
+        admissao=datetime.strptime(admissao, '%Y-%m-%d') if admissao else None,
+        setor=setor,
+        turno=turno,
+        empregador_id=empregador_id if empregador_id else None,
+        situacao=situacao,
+        empresa_id=empresa_id,
+        coordenador_id=coordenador_id if coordenador_id else None
     )
     db.session.add(colaborador)
     db.session.commit()

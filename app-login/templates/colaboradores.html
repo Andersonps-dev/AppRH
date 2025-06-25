@@ -60,74 +60,28 @@
                     <thead>
                         <tr>
                             <th>Nome</th>
-                            <th>Departamento</th>
-                            <th>CPF</th>
-                            <th>Admissão</th>
                             <th>Função</th>
-                            <th>Área</th>
+                            <th>Admissão</th>
                             <th>Setor</th>
-                            <th>Empregador</th>
                             <th>Turno</th>
+                            <th>Empregador</th>
                             <th>Situação</th>
-                            <th>Base/Site</th>
-                            <th>Coordenador</th>
-                            <th>Gerente</th>
-                            <th>Status</th>
-                            <th>Tipo</th>
-                            <th>Fretado</th>
-                            <th>Armário</th>
-                            <th>Telefone</th>
-                            <th>Gênero</th>
-                            <th>RG</th>
-                            <th>Data Emissão</th>
-                            <th>PIS</th>
-                            <th>Nome do Pai</th>
-                            <th>Nome da Mãe</th>
-                            <th>Nascimento</th>
-                            <th>Endereço</th>
-                            <th>Bairro</th>
-                            <th>Cidade</th>
-                            <th>UF</th>
-                            <th>CEP</th>
-                            <th>Data Demissão</th>
                             <th>Empresa</th>
+                            <th>Gestor</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for c in colaboradores %}
                         <tr>
                             <td>{{ c.nome }}</td>
-                            <td>{{ c.departamento }}</td>
-                            <td>{{ c.cpf }}</td>
-                            <td>{{ c.admissao.strftime('%d/%m/%Y') if c.admissao else '' }}</td>
                             <td>{{ c.funcao }}</td>
-                            <td>{{ c.area }}</td>
+                            <td>{{ c.admissao.strftime('%d/%m/%Y') if c.admissao else '' }}</td>
                             <td>{{ c.setor }}</td>
-                            <td>{{ c.empregador.nome if c.empregador else '' }}</td>
                             <td>{{ c.turno }}</td>
+                            <td>{{ c.empregador.nome if c.empregador else '' }}</td>
                             <td>{{ c.situacao }}</td>
-                            <td>{{ c.base_site }}</td>
-                            <td>{{ c.coordenador.nome if c.coordenador else '' }}</td>
-                            <td>{{ c.gerente }}</td>
-                            <td>{{ c.status }}</td>
-                            <td>{{ c.tipo }}</td>
-                            <td>{{ c.fretado }}</td>
-                            <td>{{ c.armario }}</td>
-                            <td>{{ c.telefone }}</td>
-                            <td>{{ c.genero }}</td>
-                            <td>{{ c.rg }}</td>
-                            <td>{{ c.data_emissao.strftime('%d/%m/%Y') if c.data_emissao else '' }}</td>
-                            <td>{{ c.pis }}</td>
-                            <td>{{ c.nome_pai }}</td>
-                            <td>{{ c.nome_mae }}</td>
-                            <td>{{ c.nascimento.strftime('%d/%m/%Y') if c.nascimento else '' }}</td>
-                            <td>{{ c.endereco }}</td>
-                            <td>{{ c.bairro }}</td>
-                            <td>{{ c.cidade }}</td>
-                            <td>{{ c.uf }}</td>
-                            <td>{{ c.cep }}</td>
-                            <td>{{ c.demissao.strftime('%d/%m/%Y') if c.demissao else '' }}</td>
                             <td>{{ c.empresa.name if c.empresa else '' }}</td>
+                            <td>{{ c.coordenador.nome if c.coordenador else '' }}</td>
                         </tr>
                         {% endfor %}
                     </tbody>
@@ -147,126 +101,48 @@
             </div>
             <div class="modal-body">
               <div class="row">
+                <!-- Apenas os campos essenciais no modal -->
                 <div class="col-md-6 mb-3">
                   <label for="nome" class="form-label">Nome</label>
                   <input type="text" class="form-control" id="nome" name="nome" required>
                 </div>
                 <div class="col-md-6 mb-3">
-                  <label for="cpf" class="form-label">CPF</label>
-                  <input type="text" class="form-control" id="cpf" name="cpf" required>
+                  <label for="cargo" class="form-label">Função</label>
+                  <input type="text" class="form-control" id="cargo" name="cargo" required>
                 </div>
                 <div class="col-md-6 mb-3">
-                  <label for="email" class="form-label">E-mail</label>
-                  <input type="email" class="form-control" id="email" name="email" required>
+                  <label for="data_admissao" class="form-label">Admissão</label>
+                  <input type="date" class="form-control" id="data_admissao" name="data_admissao" required>
                 </div>
                 <div class="col-md-6 mb-3">
-                  <label for="telefone" class="form-label">Telefone</label>
-                  <input type="text" class="form-control" id="telefone" name="telefone" required>
+                  <label for="setor" class="form-label">Setor</label>
+                  <input type="text" class="form-control" id="setor" name="setor">
                 </div>
                 <div class="col-md-6 mb-3">
-                  <label for="data_nascimento" class="form-label">Data de Nascimento</label>
-                  <input type="date" class="form-control" id="data_nascimento" name="data_nascimento" required>
+                  <label for="turno" class="form-label">Turno</label>
+                  <input type="text" class="form-control" id="turno" name="turno">
                 </div>
                 <div class="col-md-6 mb-3">
-                  <label for="genero" class="form-label">Gênero</label>
-                  <select class="form-select" id="genero" name="genero" required>
+                  <label for="empregador_id" class="form-label">Empregador</label>
+                  <select class="form-select" id="empregador_id" name="empregador_id">
                     <option value="">Selecione</option>
-                    <option value="M">Masculino</option>
-                    <option value="F">Feminino</option>
-                    <option value="O">Outro</option>
-                  </select>
-                </div>
-                <div class="col-md-6 mb-3">
-                  <label for="estado_civil" class="form-label">Estado Civil</label>
-                  <select class="form-select" id="estado_civil" name="estado_civil" required>
-                    <option value="">Selecione</option>
-                    <option value="S">Solteiro(a)</option>
-                    <option value="C">Casado(a)</option>
-                    <option value="D">Divorciado(a)</option>
-                    <option value="V">Viúvo(a)</option>
-                  </select>
-                </div>
-                <div class="col-md-6 mb-3">
-                  <label for="cep" class="form-label">CEP</label>
-                  <input type="text" class="form-control" id="cep" name="cep" required>
-                </div>
-                <div class="col-md-6 mb-3">
-                  <label for="endereco" class="form-label">Endereço</label>
-                  <input type="text" class="form-control" id="endereco" name="endereco" required>
-                </div>
-                <div class="col-md-6 mb-3">
-                  <label for="numero" class="form-label">Número</label>
-                  <input type="text" class="form-control" id="numero" name="numero" required>
-                </div>
-                <div class="col-md-6 mb-3">
-                  <label for="complemento" class="form-label">Complemento</label>
-                  <input type="text" class="form-control" id="complemento" name="complemento">
-                </div>
-                <div class="col-md-6 mb-3">
-                  <label for="bairro" class="form-label">Bairro</label>
-                  <input type="text" class="form-control" id="bairro" name="bairro" required>
-                </div>
-                <div class="col-md-6 mb-3">
-                  <label for="cidade" class="form-label">Cidade</label>
-                  <input type="text" class="form-control" id="cidade" name="cidade" required>
-                </div>
-                <div class="col-md-6 mb-3">
-                  <label for="estado" class="form-label">Estado</label>
-                  <select class="form-select" id="estado" name="estado" required>
-                    <option value="">Selecione</option>
-                    {% for estado in estados %}
-                    <option value="{{ estado.sigla }}">{{ estado.nome }}</option>
+                    {% for e in empregadores %}
+                      <option value="{{ e.id }}">{{ e.nome }}</option>
                     {% endfor %}
                   </select>
                 </div>
                 <div class="col-md-6 mb-3">
-                  <label for="pais" class="form-label">País</label>
-                  <input type="text" class="form-control" id="pais" name="pais" value="Brasil" readonly>
+                  <label for="status" class="form-label">Situação</label>
+                  <input type="text" class="form-control" id="status" name="status">
                 </div>
                 <div class="col-md-6 mb-3">
-                  <label for="cargo" class="form-label">Cargo</label>
-                  <input type="text" class="form-control" id="cargo" name="cargo" required>
-                </div>
-                <div class="col-md-6 mb-3">
-                  <label for="salario" class="form-label">Salário</label>
-                  <input type="number" class="form-control" id="salario" name="salario" step="0.01" required>
-                </div>
-                <div class="col-md-6 mb-3">
-                  <label for="data_admissao" class="form-label">Data de Admissão</label>
-                  <input type="date" class="form-control" id="data_admissao" name="data_admissao" required>
-                </div>
-                <div class="col-md-6 mb-3">
-                  <label for="turno" class="form-label">Turno</label>
-                  <select class="form-select" id="turno" name="turno" required>
+                  <label for="coordenador_id" class="form-label">Gestor</label>
+                  <select class="form-select" id="coordenador_id" name="coordenador_id">
                     <option value="">Selecione</option>
-                    <option value="M">Matutino</option>
-                    <option value="V">Vespertino</option>
-                    <option value="N">Noturno</option>
+                    {% for c in coordenadores %}
+                      <option value="{{ c.id }}">{{ c.nome }}</option>
+                    {% endfor %}
                   </select>
-                </div>
-                <div class="col-md-6 mb-3">
-                  <label for="tipo_contrato" class="form-label">Tipo de Contrato</label>
-                  <select class="form-select" id="tipo_contrato" name="tipo_contrato" required>
-                    <option value="">Selecione</option>
-                    <option value="CLT">CLT</option>
-                    <option value="PJ">PJ</option>
-                    <option value="Estágio">Estágio</option>
-                    <option value="Aprendiz">Aprendiz</option>
-                  </select>
-                </div>
-                <div class="col-md-6 mb-3">
-                  <label for="status" class="form-label">Status</label>
-                  <select class="form-select" id="status" name="status" required>
-                    <option value="">Selecione</option>
-                    <option value="Ativo">Ativo</option>
-                    <option value="Inativo">Inativo</option>
-                    <option value="Afastado">Afastado</option>
-                    <option value="Desligado">Desligado</option>
-                  </select>
-                </div>
-                <div class="col-md-6 mb-3">
-                  <label for="foto" class="form-label">Foto</label>
-                  <input type="file" class="form-control" id="foto" name="foto" accept="image/*">
                 </div>
               </div>
             </div>
