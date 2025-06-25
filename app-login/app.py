@@ -274,6 +274,8 @@ def colaboradores():
     filtro_nome = request.args.get('filtro_nome', '')
     filtro_empresa = request.args.get('filtro_empresa', '')
     filtro_status = request.args.get('filtro_status', '')
+    filtro_setor = request.args.get('filtro_setor', '')
+    filtro_gestor = request.args.get('filtro_gestor', '')
 
     query = Colaborador.query
     if filtro_nome:
@@ -281,21 +283,25 @@ def colaboradores():
     if filtro_empresa:
         query = query.filter(Colaborador.empresa_id == filtro_empresa)
     if filtro_status:
-        query = query.filter(Colaborador.status == filtro_status)
+        query = query.filter(Colaborador.situacao.ilike(f'%{filtro_status}%'))
+    if filtro_setor:
+        query = query.filter(Colaborador.setor.ilike(f'%{filtro_setor}%'))
+    if filtro_gestor:
+        query = query.filter(Colaborador.gestor.ilike(f'%{filtro_gestor}%'))
     colaboradores = query.all()
 
     return render_template(
         'colaboradores.html',
         user=g.user,
         companies=companies,
-        empregadores=empregadores,
-        coordenadores=coordenadores,
         colaboradores=colaboradores,
         turnos=turnos,
         status_list=status_list,
         filtro_nome=filtro_nome,
         filtro_empresa=filtro_empresa,
         filtro_status=filtro_status,
+        filtro_setor=filtro_setor,
+        filtro_gestor=filtro_gestor,
         estados=[{'sigla': 'MG', 'nome': 'Minas Gerais'}, {'sigla': 'SP', 'nome': 'São Paulo'}]  # Exemplo, ajuste conforme necessário
     )
 
@@ -352,19 +358,57 @@ def upload_colaboradores():
         empresa = Company.query.filter_by(name=empresa_nome).first() if empresa_nome else None
         if empresa_nome and not empresa:
             erros.append(f"Linha {idx+2}: Empresa '{empresa_nome}' não encontrada.")
-            continue  # pula este colaborador
-        colaborador = Colaborador(
-            nome=row.get('Nome'),
-            funcao=row.get('Função'),
-            admissao=datetime.strptime(str(row.get('Admissao')), '%d/%m/%Y') if row.get('Admissao') else None,
-            setor=row.get('Setor') if 'Setor' in row else None,
-            turno=row.get('Turno') if 'Turno' in row else None,
-            empregador_id=None,  # ajuste se necessário
-            situacao=row.get('Situação') if 'Situação' in row else None,
-            empresa_id=empresa.id if empresa else None,
-            coordenador_id=None  # ajuste se necessário
-        )
-        db.session.add(colaborador)
+            continue
+
+        cpf = str(row.get('Cpf')).strip() if row.get('Cpf') else None
+        if not cpf:
+            erros.append(f"Linha {idx+2}: CPF não preenchido.")
+            continue
+
+        admissao_val = row.get('Admissão')
+        admissao = None
+        if pd.isna(admissao_val) or admissao_val is None or str(admissao_val).strip() == '':
+            erros.append(f"Linha {idx+2}: Data de admissão não preenchida.")
+            continue
+        try:
+            if isinstance(admissao_val, (pd.Timestamp, datetime)):
+                admissao = admissao_val.strftime('%d/%m/%Y')
+            elif isinstance(admissao_val, float) or isinstance(admissao_val, int):
+                admissao = pd.to_datetime(admissao_val, unit='d', origin='1899-12-30').strftime('%d/%m/%Y')
+            else:
+                admissao = pd.to_datetime(str(admissao_val), dayfirst=True, errors='coerce')
+                if pd.isna(admissao):
+                    raise ValueError
+                admissao = admissao.strftime('%d/%m/%Y')
+        except Exception:
+            erros.append(f"Linha {idx+2}: Data de admissão inválida.")
+            continue
+
+        colaborador = Colaborador.query.filter_by(cpf=cpf).first()
+        if colaborador:
+            colaborador.nome = row.get('Nome')
+            colaborador.funcao = row.get('Função')
+            colaborador.admissao = admissao
+            colaborador.setor = row.get('Setor')
+            colaborador.turno = row.get('Turno')
+            colaborador.empregador = row.get('Empregador')
+            colaborador.situacao = row.get('Situação')
+            colaborador.empresa_id = empresa.id if empresa else None
+            colaborador.gestor = row.get('Gestor')
+        else:
+            colaborador = Colaborador(
+                nome=row.get('Nome'),
+                cpf=cpf,
+                funcao=row.get('Função'),
+                admissao=admissao,
+                setor=row.get('Setor'),
+                turno=row.get('Turno'),
+                empregador=row.get('Empregador'),
+                situacao=row.get('Situação'),
+                empresa_id=empresa.id if empresa else None,
+                gestor=row.get('Gestor')
+            )
+            db.session.add(colaborador)
     db.session.commit()
     if erros:
         flash('Alguns colaboradores não foram importados:<br>' + '<br>'.join(erros))
@@ -379,29 +423,65 @@ def add_colaborador():
         flash('Sem acesso.')
         return redirect(url_for('index'))
     nome = request.form.get('nome')
-    funcao = request.form.get('cargo')
-    admissao = request.form.get('data_admissao')
+    cpf = request.form.get('cpf')
+    funcao = request.form.get('funcao')
+    admissao = request.form.get('admissao')
     setor = request.form.get('setor')
     turno = request.form.get('turno')
-    empregador_id = request.form.get('empregador_id')
-    situacao = request.form.get('status')
-    empresa_id = g.user.company_id if not g.user.all_companies else None
-    coordenador_id = request.form.get('coordenador_id')
+    empregador = request.form.get('empregador')
+    situacao = request.form.get('situacao')
+    empresa_id = request.form.get('empresa_id')
+    gestor = request.form.get('gestor')
 
     colaborador = Colaborador(
         nome=nome,
+        cpf=cpf,
         funcao=funcao,
-        admissao=datetime.strptime(admissao, '%Y-%m-%d') if admissao else None,
+        admissao=admissao,
         setor=setor,
         turno=turno,
-        empregador_id=empregador_id if empregador_id else None,
+        empregador=empregador,
         situacao=situacao,
         empresa_id=empresa_id,
-        coordenador_id=coordenador_id if coordenador_id else None
+        gestor=gestor
     )
     db.session.add(colaborador)
     db.session.commit()
     flash('Colaborador cadastrado com sucesso!')
+    return redirect(url_for('colaboradores'))
+
+@app.route('/edit_colaborador/<int:colaborador_id>', methods=['GET', 'POST'])
+def edit_colaborador(colaborador_id):
+    if g.user is None or not has_permission(g.user, 'can_access_colaboradores'):
+        flash('Sem acesso.')
+        return redirect(url_for('index'))
+    colaborador = Colaborador.query.get_or_404(colaborador_id)
+    companies = Company.query.all()
+    if request.method == 'POST':
+        colaborador.nome = request.form.get('nome')
+        colaborador.cpf = request.form.get('cpf')
+        colaborador.funcao = request.form.get('funcao')
+        colaborador.admissao = request.form.get('admissao')
+        colaborador.setor = request.form.get('setor')
+        colaborador.turno = request.form.get('turno')
+        colaborador.empregador = request.form.get('empregador')
+        colaborador.situacao = request.form.get('situacao')
+        colaborador.empresa_id = request.form.get('empresa_id')
+        colaborador.gestor = request.form.get('gestor')
+        db.session.commit()
+        flash('Colaborador atualizado com sucesso!')
+        return redirect(url_for('colaboradores'))
+    return render_template('edit_colaborador.html', user=g.user, colaborador=colaborador, companies=companies)
+
+@app.route('/delete_colaborador/<int:colaborador_id>')
+def delete_colaborador(colaborador_id):
+    if g.user is None or not has_permission(g.user, 'can_access_colaboradores'):
+        flash('Sem acesso.')
+        return redirect(url_for('index'))
+    colaborador = Colaborador.query.get_or_404(colaborador_id)
+    db.session.delete(colaborador)
+    db.session.commit()
+    flash('Colaborador excluído com sucesso!')
     return redirect(url_for('colaboradores'))
 
 if __name__ == '__main__':

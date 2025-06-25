@@ -18,10 +18,10 @@
                 </div>
             </div>
             <form class="row g-2 mb-3" method="get">
-                <div class="col-md-3">
+                <div class="col-md-2">
                     <input type="text" name="filtro_nome" class="form-control" placeholder="Filtrar por nome" value="{{ filtro_nome }}">
                 </div>
-                <div class="col-md-3">
+                <div class="col-md-2">
                     <select name="filtro_empresa" class="form-select">
                         <option value="">Todas Empresas</option>
                         {% for c in companies %}
@@ -29,7 +29,7 @@
                         {% endfor %}
                     </select>
                 </div>
-                <div class="col-md-3">
+                <div class="col-md-2">
                     <select name="filtro_status" class="form-select">
                         <option value="">Todos Status</option>
                         {% for s in status_list %}
@@ -37,7 +37,13 @@
                         {% endfor %}
                     </select>
                 </div>
-                <div class="col-md-3">
+                <div class="col-md-2">
+                    <input type="text" name="filtro_setor" class="form-control" placeholder="Filtrar por setor" value="{{ filtro_setor }}">
+                </div>
+                <div class="col-md-2">
+                    <input type="text" name="filtro_gestor" class="form-control" placeholder="Filtrar por gestor" value="{{ filtro_gestor }}">
+                </div>
+                <div class="col-md-2">
                     <button class="btn btn-primary" type="submit">Filtrar</button>
                 </div>
             </form>
@@ -60,6 +66,7 @@
                     <thead>
                         <tr>
                             <th>Nome</th>
+                            <th>Cpf</th>
                             <th>Função</th>
                             <th>Admissão</th>
                             <th>Setor</th>
@@ -68,20 +75,26 @@
                             <th>Situação</th>
                             <th>Empresa</th>
                             <th>Gestor</th>
+                            <th>Ações</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for c in colaboradores %}
                         <tr>
                             <td>{{ c.nome }}</td>
+                            <td>{{ c.cpf }}</td>
                             <td>{{ c.funcao }}</td>
-                            <td>{{ c.admissao.strftime('%d/%m/%Y') if c.admissao else '' }}</td>
+                            <td>{{ c.admissao }}</td>
                             <td>{{ c.setor }}</td>
                             <td>{{ c.turno }}</td>
-                            <td>{{ c.empregador.nome if c.empregador else '' }}</td>
+                            <td>{{ c.empregador }}</td>
                             <td>{{ c.situacao }}</td>
                             <td>{{ c.empresa.name if c.empresa else '' }}</td>
-                            <td>{{ c.coordenador.nome if c.coordenador else '' }}</td>
+                            <td>{{ c.gestor }}</td>
+                            <td>
+                                <a href="{{ url_for('edit_colaborador', colaborador_id=c.id) }}" class="btn btn-sm btn-primary">Editar</a>
+                                <a href="{{ url_for('delete_colaborador', colaborador_id=c.id) }}" class="btn btn-sm btn-danger" onclick="return confirm('Tem certeza que deseja excluir?')">Excluir</a>
+                            </td>
                         </tr>
                         {% endfor %}
                     </tbody>
@@ -123,13 +136,12 @@
                   <input type="text" class="form-control" id="turno" name="turno">
                 </div>
                 <div class="col-md-6 mb-3">
-                  <label for="empregador_id" class="form-label">Empregador</label>
-                  <select class="form-select" id="empregador_id" name="empregador_id">
-                    <option value="">Selecione</option>
-                    {% for e in empregadores %}
-                      <option value="{{ e.id }}">{{ e.nome }}</option>
-                    {% endfor %}
-                  </select>
+                  <label for="cpf" class="form-label">CPF</label>
+                  <input type="text" class="form-control" id="cpf" name="cpf" required>
+                </div>
+                <div class="col-md-6 mb-3">
+                  <label for="empregador" class="form-label">Empregador</label>
+                  <input type="text" class="form-control" id="empregador" name="empregador">
                 </div>
                 <div class="col-md-6 mb-3">
                   <label for="status" class="form-label">Situação</label>
@@ -154,33 +166,5 @@
         </div>
       </div>
     </div>
-
-    <script>
-      // Máscara para o campo CPF
-      var cpf = document.getElementById('cpf');
-      cpf.addEventListener('input', function() {
-        this.value = this.value.replace(/[^0-9]/g, '').replace(/(.{3})(.{3})(.{3})(.*)/, '$1.$2.$3-$4');
-      });
-
-      // Máscara para o campo Telefone
-      var telefone = document.getElementById('telefone');
-      telefone.addEventListener('input', function() {
-        this.value = this.value.replace(/[^0-9]/g, '').replace(/(.{2})(.{5})(.{4})(.*)/, '($1) $2-$3');
-      });
-
-      // Máscara para o campo CEP
-      var cep = document.getElementById('cep');
-      cep.addEventListener('input', function() {
-        this.value = this.value.replace(/[^0-9]/g, '').replace(/(.{5})(.*)/, '$1-$2');
-      });
-
-      // Máscara para os campos de data
-      var dataFields = document.querySelectorAll('input[type="date"]');
-      dataFields.forEach(function(field) {
-        field.addEventListener('input', function() {
-          this.value = this.value.replace(/[^0-9]/g, '').replace(/(.{2})(.{2})(.*)/, '$1/$2/$3');
-        });
-      });
-    </script>
 </body>
 </html>
