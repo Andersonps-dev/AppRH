@@ -318,19 +318,22 @@ def export_colaboradores():
     if filtro_empresa:
         query = query.filter(Colaborador.empresa_id == filtro_empresa)
     if filtro_status:
-        query = query.filter(Colaborador.status == filtro_status)
+        query = query.filter(Colaborador.situacao.ilike(f'%{filtro_status}%'))
     colaboradores = query.all()
 
     data = []
     for c in colaboradores:
         data.append({
             'Nome': c.nome,
-            'Departamento': c.departamento,
-            'CPF': c.cpf,
-            'Admissao': c.admissao.strftime('%d/%m/%Y') if c.admissao else '',
+            'Cpf': c.cpf,
             'Função': c.funcao,
+            'Admissão': c.admissao,
+            'Setor': c.setor,
+            'Turno': c.turno,
+            'Empregador': c.empregador,
+            'Situação': c.situacao,
             'Empresa': c.empresa.name if c.empresa else '',
-            # Adicione outros campos conforme necessário
+            'Gestor': c.gestor
         })
     df = pd.DataFrame(data)
     output = io.BytesIO()
