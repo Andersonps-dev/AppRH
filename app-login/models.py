@@ -1,4 +1,5 @@
 from flask_sqlalchemy import SQLAlchemy
+from flask_migrate import Migrate
 
 db = SQLAlchemy()
 
@@ -23,13 +24,14 @@ class User(db.Model):
 
 class Permission(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    role = db.Column(db.String(50), nullable=False, unique=True)
-    can_access_index = db.Column(db.Boolean, default=True)
+    role = db.Column(db.String(50), unique=True, nullable=False)
+    can_access_index = db.Column(db.Boolean, default=False)
     can_access_register_person = db.Column(db.Boolean, default=False)
     can_access_register_company = db.Column(db.Boolean, default=False)
     can_access_colaboradores = db.Column(db.Boolean, default=False)
-    can_access_permissions = db.Column(db.Boolean, default=False)
     can_access_lista_presenca = db.Column(db.Boolean, default=False)
+    can_access_register_sector = db.Column(db.Boolean, default=False)  # <-- Adicione esta linha!
+    can_access_permissions = db.Column(db.Boolean, default=False)
     can_access_setores = db.Column(db.Boolean, default=False)
 
 class Colaborador(db.Model):

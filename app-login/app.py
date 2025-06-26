@@ -1,6 +1,7 @@
 from flask import Flask, render_template, request, redirect, url_for, session, flash, g, send_file
 from werkzeug.security import generate_password_hash, check_password_hash
 from models import db, User, Company, Permission, Colaborador, Presenca, Setor  # Adicione Setor aqui
+from flask_migrate import Migrate
 import os
 from dotenv import load_dotenv
 import pandas as pd
@@ -14,6 +15,7 @@ app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///database.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db.init_app(app)
+migrate = Migrate(app, db)
 
 load_dotenv()
 MASTER_USER = os.getenv('master_user')
