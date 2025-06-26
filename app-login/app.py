@@ -270,6 +270,7 @@ def colaboradores():
         return redirect(url_for('index'))
 
     companies = Company.query.all()
+    setores = Setor.query.order_by(Setor.nome).all()  # Adicione esta linha
     turnos = ['1º TURNO', '2º TURNO', 'COMERCIAL', '3º TURNO']
     status_list = ['ATIVO', 'INATIVO']
 
@@ -288,7 +289,7 @@ def colaboradores():
     if filtro_status:
         query = query.filter(Colaborador.situacao.ilike(f'%{filtro_status}%'))
     if filtro_setor:
-        query = query.filter(Colaborador.setor.ilike(f'%{filtro_setor}%'))
+        query = query.filter(Colaborador.setor_id == int(filtro_setor))
     if filtro_gestor:
         query = query.filter(Colaborador.gestor.ilike(f'%{filtro_gestor}%'))
     colaboradores = query.all()
@@ -297,6 +298,7 @@ def colaboradores():
         'colaboradores.html',
         user=g.user,
         companies=companies,
+        setores=setores,  # <-- Passe para o template
         colaboradores=colaboradores,
         turnos=turnos,
         status_list=status_list,
@@ -316,6 +318,8 @@ def export_colaboradores():
     filtro_nome = request.args.get('filtro_nome', '')
     filtro_empresa = request.args.get('filtro_empresa', '')
     filtro_status = request.args.get('filtro_status', '')
+    filtro_setor = request.args.get('filtro_setor', '')
+    filtro_gestor = request.args.get('filtro_gestor', '')
 
     query = Colaborador.query
     if filtro_nome:
@@ -324,6 +328,13 @@ def export_colaboradores():
         query = query.filter(Colaborador.empresa_id == filtro_empresa)
     if filtro_status:
         query = query.filter(Colaborador.situacao.ilike(f'%{filtro_status}%'))
+    if filtro_setor:
+        # Se filtro_setor for o id do setor:
+        query = query.filter(Colaborador.setor_id == int(filtro_setor))
+        # Se for o nome do setor, use:
+        # query = query.join(Setor).filter(Setor.nome.ilike(f'%{filtro_setor}%'))
+    if filtro_gestor:
+        query = query.filter(Colaborador.gestor.ilike(f'%{filtro_gestor}%'))
     colaboradores = query.all()
 
     data = []
@@ -333,7 +344,7 @@ def export_colaboradores():
             'Cpf': c.cpf,
             'Função': c.funcao,
             'Admissão': c.admissao,
-            'Setor': c.setor,
+            'Setor': c.setor.nome if c.setor else '',
             'Turno': c.turno,
             'Empregador': c.empregador,
             'Situação': c.situacao,
@@ -359,6 +370,7 @@ def upload_colaboradores():
         return redirect(url_for('colaboradores'))
     df = pd.read_excel(file)
     empresas_nao_cadastradas = set()
+    setores_nao_cadastrados = set()
     for idx, row in df.iterrows():
         empresa_nome = row.get('Empresa')
         empresa = Company.query.filter_by(name=empresa_nome).first() if empresa_nome else None
@@ -386,15 +398,14 @@ def upload_colaboradores():
                 admissao = admissao.strftime('%d/%m/%Y')
         except Exception:
             continue
-        
+
         setor_nome = row.get('Setor')
         setor_obj = None
         if setor_nome and str(setor_nome).strip():
             setor_obj = Setor.query.filter_by(nome=str(setor_nome).strip()).first()
             if not setor_obj:
-                setor_obj = Setor(nome=str(setor_nome).strip())
-                db.session.add(setor_obj)
-                db.session.commit()
+                setores_nao_cadastrados.add(str(setor_nome).strip())
+                continue  # pula este colaborador
 
         colaborador = Colaborador.query.filter_by(cpf=cpf).first()
         if colaborador:
@@ -422,14 +433,19 @@ def upload_colaboradores():
             )
             db.session.add(colaborador)
     db.session.commit()
+    mensagens = []
     if empresas_nao_cadastradas:
         empresas_str = ', '.join(sorted(empresas_nao_cadastradas))
-        flash(f'Falta cadastrar as seguintes empresas antes de importar: {empresas_str}')
-    else:
-        flash('Colaboradores importados com sucesso!')
+        mensagens.append(f'Falta cadastrar as seguintes empresas antes de importar: {empresas_str}')
+    if setores_nao_cadastrados:
+        setores_str = ', '.join(sorted(setores_nao_cadastrados))
+        mensagens.append(f'Falta cadastrar os seguintes setores antes de importar: {setores_str}')
+    if not mensagens:
+        mensagens.append('Colaboradores importados com sucesso!')
+    for msg in mensagens:
+        flash(msg)
     return redirect(url_for('colaboradores'))
 
-# Exemplo de rota para adicionar colaborador manualmente
 @app.route('/add_colaborador', methods=['POST'])
 def add_colaborador():
     if g.user is None or not has_permission(g.user, 'can_access_colaboradores'):
@@ -437,30 +453,27 @@ def add_colaborador():
         return redirect(url_for('index'))
     nome = request.form.get('nome')
     cpf = request.form.get('cpf')
-    funcao = request.form.get('funcao')
-    admissao = request.form.get('admissao')
-    setor = request.form.get('setor')
+    funcao = request.form.get('funcao')  # Certo!
+    admissao = request.form.get('admissao')  # Certo!
+    setor_id = request.form.get('setor_id')
+    setor_obj = Setor.query.get(setor_id) if setor_id else None
     turno = request.form.get('turno')
     empregador = request.form.get('empregador')
     situacao = request.form.get('situacao')
-    empresa_id = request.form.get('empresa_id')
+    empresa_id = request.form.get('empresa_id')  # Certo!
     gestor = request.form.get('gestor')
 
-    setor_nome = request.form.get('setor')
-    setor_obj = None
-    if setor_nome and setor_nome.strip():
-        setor_obj = Setor.query.filter_by(nome=setor_nome.strip()).first()
-        if not setor_obj:
-            setor_obj = Setor(nome=setor_nome.strip())
-            db.session.add(setor_obj)
-            db.session.commit()
+    # Validação extra (opcional)
+    if not all([nome, cpf, funcao, admissao, setor_obj, turno, situacao, empresa_id]):
+        flash('Preencha todos os campos obrigatórios!')
+        return redirect(url_for('colaboradores'))
 
     colaborador = Colaborador(
         nome=nome,
         cpf=cpf,
         funcao=funcao,
         admissao=admissao,
-        setor=setor_obj,  # <-- Agora é o objeto Setor!
+        setor=setor_obj,
         turno=turno,
         empregador=empregador,
         situacao=situacao,
@@ -657,6 +670,28 @@ def register_sector():
         return redirect(url_for('register_sector'))
     setores = Setor.query.all()
     return render_template('register_sector.html', user=g.user, setores=setores)
+
+@app.route('/edit_sector/<int:setor_id>', methods=['GET', 'POST'])
+def edit_sector(setor_id):
+    setor = Setor.query.get_or_404(setor_id)
+    if request.method == 'POST':
+        nome = request.form['setor']
+        if Setor.query.filter(Setor.nome == nome, Setor.id != setor_id).first():
+            flash('Já existe um setor com esse nome!')
+        else:
+            setor.nome = nome
+            db.session.commit()
+            flash('Setor atualizado com sucesso!')
+            return redirect(url_for('register_sector'))
+    return render_template('edit_sector.html', user=g.user, setor=setor)
+
+@app.route('/delete_sector/<int:setor_id>', methods=['POST'])
+def delete_sector(setor_id):
+    setor = Setor.query.get_or_404(setor_id)
+    db.session.delete(setor)
+    db.session.commit()
+    flash('Setor excluído com sucesso!')
+    return redirect(url_for('register_sector'))
 
 @app.route('/delete_presenca/<int:presenca_id>', methods=['POST'])
 def delete_presenca(presenca_id):

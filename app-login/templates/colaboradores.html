@@ -14,7 +14,13 @@
             <h2>Colaboradores</h2>
             <div>
                 <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#modalColaborador">Novo Colaborador</button>
-                <a href="{{ url_for('export_colaboradores', filtro_nome=filtro_nome, filtro_empresa=filtro_empresa, filtro_status=filtro_status) }}" class="btn btn-outline-primary">Exportar Excel</a>
+                <a href="{{ url_for('export_colaboradores',
+    filtro_nome=filtro_nome,
+    filtro_empresa=filtro_empresa,
+    filtro_status=filtro_status,
+    filtro_setor=filtro_setor,
+    filtro_gestor=filtro_gestor
+) }}" class="btn btn-outline-primary">Exportar Excel</a>
             </div>
         </div>
         <form class="row g-2 mb-3" method="get">
@@ -126,15 +132,20 @@
                 </div>
                 <div class="col-md-6 mb-3">
                   <label for="cargo" class="form-label">Função</label>
-                  <input type="text" class="form-control" id="cargo" name="cargo" required>
+                  <input type="text" class="form-control" id="cargo" name="funcao" required>
                 </div>
                 <div class="col-md-6 mb-3">
                   <label for="data_admissao" class="form-label">Admissão</label>
-                  <input type="date" class="form-control" id="data_admissao" name="data_admissao" required>
+                  <input type="date" class="form-control" id="data_admissao" name="admissao" required>
                 </div>
                 <div class="col-md-6 mb-3">
                   <label for="setor" class="form-label">Setor</label>
-                  <input type="text" class="form-control" id="setor" name="setor">
+                  <select class="form-select" id="setor" name="setor_id" required>
+                    <option value="">Selecione</option>
+                    {% for setor in setores %}
+                        <option value="{{ setor.id }}">{{ setor.nome }}</option>
+                    {% endfor %}
+                  </select>
                 </div>
                 <div class="col-md-6 mb-3">
                   <label for="turno" class="form-label">Turno</label>
@@ -165,6 +176,15 @@
                 <div class="col-md-6 mb-3">
                   <label for="gestor" class="form-label">Gestor</label>
                   <input type="text" class="form-control" id="gestor" name="gestor">
+                </div>
+                <div class="col-md-6 mb-3">
+                  <label for="empresa_id" class="form-label">Empresa</label>
+                  <select class="form-select" id="empresa_id" name="empresa_id" required>
+                    <option value="">Selecione</option>
+                    {% for empresa in companies %}
+                        <option value="{{ empresa.id }}">{{ empresa.name }}</option>
+                    {% endfor %}
+                  </select>
                 </div>
               </div>
             </div>

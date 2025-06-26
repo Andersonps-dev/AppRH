@@ -10,26 +10,7 @@
         <a class="nav-link text-white" href="{{ url_for('index') }}">Home</a>
       </li>
       {% endif %}
-      {% if user and has_permission(user, 'can_access_register_person') %}
-      <li class="nav-item mb-1">
-        <a class="nav-link text-white" href="{{ url_for('register_person') }}">Cadastrar Usuário</a>
-      </li>
-      {% endif %}
-      {% if user and has_permission(user, 'can_access_register_company') %}
-      <li class="nav-item mb-1">
-        <a class="nav-link text-white" href="{{ url_for('register_company') }}">Cadastrar Empresa</a>
-      </li>
-      {% endif %}
-      {% if user and has_permission(user, 'can_access_register_company') %}
-      <li class="nav-item mb-1">
-        <a class="nav-link text-white" href="{{ url_for('register_sector') }}">Cadastrar Setor</a>
-      </li>
-      {% endif %}
-      {% if user and has_permission(user, 'can_access_colaboradores') %}
-      <li class="nav-item mb-1">
-        <a class="nav-link text-white" href="{{ url_for('colaboradores') }}">Colaboradores</a>
-      </li>
-      {% endif %}
+
       {% if user and has_permission(user, 'can_access_lista_presenca') %}
       <li class="nav-item mb-1">
         <a class="nav-link text-white" href="{{ url_for('lista_presenca') }}">Lista de Presença</a>
@@ -38,6 +19,45 @@
         <a class="nav-link text-white" href="{{ url_for('minhas_presencas') }}">Minhas Presenças</a>
       </li>
       {% endif %}
+
+      {% if user and has_permission(user, 'can_access_colaboradores') %}
+      <li class="nav-item mb-1">
+        <a class="nav-link text-white" href="{{ url_for('colaboradores') }}">Colaboradores</a>
+      </li>
+      {% endif %}
+
+      <!-- Grupo de Cadastros -->
+      <li class="nav-item mb-1">
+        <a class="nav-link text-white d-flex justify-content-between align-items-center"
+           data-bs-toggle="collapse"
+           href="#cadastrosCollapse"
+           role="button"
+           aria-expanded="false"
+           aria-controls="cadastrosCollapse"
+           id="cadastrosToggle">
+          Cadastros
+          <span id="cadastrosIcon" class="bi bi-chevron-right"></span>
+        </a>
+        <div class="collapse" id="cadastrosCollapse">
+          <ul class="nav flex-column ms-3">
+            {% if user and has_permission(user, 'can_access_register_person') %}
+            <li class="nav-item mb-1">
+              <a class="nav-link text-white" href="{{ url_for('register_person') }}">Cadastrar Usuário</a>
+            </li>
+            {% endif %}
+            {% if user and has_permission(user, 'can_access_register_company') %}
+            <li class="nav-item mb-1">
+              <a class="nav-link text-white" href="{{ url_for('register_company') }}">Cadastrar Empresa</a>
+            </li>
+            <li class="nav-item mb-1">
+              <a class="nav-link text-white" href="{{ url_for('register_sector') }}">Cadastrar Setor</a>
+            </li>
+            {% endif %}
+          </ul>
+        </div>
+      </li>
+      <!-- Fim do grupo de Cadastros -->
+
       {% if user and (user.role == 'admin' or user.role == 'master' or user.username == 'luftsolutions.extrema') %}
       <li class="nav-item mb-1">
         <a class="nav-link text-white" href="{{ url_for('permissions') }}">Permissões</a>
@@ -74,8 +94,10 @@
     {% block content %}{% endblock %}
   </div>
 </div>
+<!-- Adicione o Bootstrap Icons se ainda não estiver no projeto -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-  // Filtro do menu lateral em tempo real
   document.addEventListener('DOMContentLoaded', function() {
     const input = document.getElementById('menuSearch');
     const menu = document.getElementById('sidebarMenu');
@@ -85,6 +107,30 @@
         const text = li.innerText.toLowerCase();
         li.style.display = text.includes(val) ? '' : 'none';
       });
+    });
+
+    // Estado persistente do grupo Cadastros
+    const collapse = document.getElementById('cadastrosCollapse');
+    const icon = document.getElementById('cadastrosIcon');
+    const collapseKey = 'cadastrosCollapseOpen';
+
+    // Restaurar estado ao carregar
+    if (localStorage.getItem(collapseKey) === 'true') {
+      new bootstrap.Collapse(collapse, {toggle: true});
+      icon.classList.remove('bi-chevron-right');
+      icon.classList.add('bi-chevron-down');
+    }
+
+    // Atualizar ícone e salvar estado ao expandir/minimizar
+    collapse.addEventListener('show.bs.collapse', function () {
+      icon.classList.remove('bi-chevron-right');
+      icon.classList.add('bi-chevron-down');
+      localStorage.setItem(collapseKey, 'true');
+    });
+    collapse.addEventListener('hide.bs.collapse', function () {
+      icon.classList.remove('bi-chevron-down');
+      icon.classList.add('bi-chevron-right');
+      localStorage.setItem(collapseKey, 'false');
     });
   });
 </script>
