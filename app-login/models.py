@@ -18,6 +18,8 @@ class User(db.Model):
     turno = db.Column(db.String(50), nullable=True)
     all_setores = db.Column(db.Boolean, default=False)
     all_turnos = db.Column(db.Boolean, default=False)
+    setor_id = db.Column(db.Integer, db.ForeignKey('setor.id'))
+    setor = db.relationship('Setor')
 
 class Permission(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -27,7 +29,8 @@ class Permission(db.Model):
     can_access_register_company = db.Column(db.Boolean, default=False)
     can_access_colaboradores = db.Column(db.Boolean, default=False)
     can_access_permissions = db.Column(db.Boolean, default=False)
-    can_access_lista_presenca = db.Column(db.Boolean, default=False)  # NOVO
+    can_access_lista_presenca = db.Column(db.Boolean, default=False)
+    can_access_setores = db.Column(db.Boolean, default=False)
 
 class Colaborador(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -35,9 +38,10 @@ class Colaborador(db.Model):
     cpf = db.Column(db.String(14), unique=True, nullable=False)
     funcao = db.Column(db.String(100))
     admissao = db.Column(db.String(30), nullable=False)
-    setor = db.Column(db.String(100))
+    setor_id = db.Column(db.Integer, db.ForeignKey('setor.id'))  # Alterado para chave estrangeira
+    setor = db.relationship('Setor')
     turno = db.Column(db.String(30))
-    empregador = db.Column(db.String(150))  # Novo campo como string
+    empregador = db.Column(db.String(150))
     situacao = db.Column(db.String(50))
     empresa_id = db.Column(db.Integer, db.ForeignKey('company.id'), nullable=False)
     empresa = db.relationship('Company')
@@ -52,3 +56,7 @@ class Presenca(db.Model):
 
     colaborador = db.relationship('Colaborador')
     usuario = db.relationship('User')
+
+class Setor(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    nome = db.Column(db.String(100), unique=True, nullable=False)

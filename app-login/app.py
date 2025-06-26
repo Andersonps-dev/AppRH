@@ -1,6 +1,6 @@
 from flask import Flask, render_template, request, redirect, url_for, session, flash, g, send_file
 from werkzeug.security import generate_password_hash, check_password_hash
-from models import db, User, Company, Permission, Colaborador, Presenca  # Adicione Presenca aqui
+from models import db, User, Company, Permission, Colaborador, Presenca, Setor  # Adicione Setor aqui
 import os
 from dotenv import load_dotenv
 import pandas as pd
@@ -28,6 +28,7 @@ PERMISSIONS = [
     ('can_access_register_company', 'Acessa Cadastro Empresa'),
     ('can_access_colaboradores', 'Acessa Colaboradores'),
     ('can_access_lista_presenca', 'Acessa Lista de Presença'),
+    ('can_access_register_sector', 'Acessa Cadastro Setor'),
     ('can_access_permissions', 'Acessa Permissões'),
 ]
 
@@ -603,6 +604,26 @@ def minhas_presencas():
         filtro_turno=filtro_turno,
         filtro_data=filtro_data
     )
+
+@app.route('/register_sector', methods=['GET', 'POST'])
+def register_sector():
+    if g.user is None:
+        return redirect(url_for('login'))
+    if not has_permission(g.user, 'can_access_register_sector'):
+        flash('Sem acesso. Entre em contato: analiseoperacional.extrema@luftsolutions.com.br')
+        return redirect(url_for('index'))
+    if request.method == 'POST':
+        nome = request.form['setor']
+        if Setor.query.filter_by(nome=nome).first():
+            flash('Setor já existe!')
+        else:
+            setor = Setor(nome=nome)
+            db.session.add(setor)
+            db.session.commit()
+            flash('Setor cadastrado com sucesso!')
+        return redirect(url_for('register_sector'))
+    setores = Setor.query.all()
+    return render_template('register_sector.html', user=g.user, setores=setores)
 
 if __name__ == '__main__':
     with app.app_context():
