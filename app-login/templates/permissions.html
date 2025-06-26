@@ -8,50 +8,48 @@
 <body class="bg-light">
     {% extends "navbar.html" %}
     {% block content %}
-    <div class="container mt-5">
-        <div class="card shadow p-4 mb-4">
-            <h2 class="mb-4">Definir Permissões por Cargo</h2>
-            <form method="POST">
-                <table class="table table-bordered">
-                    <thead>
-                        <tr>
-                            <th>Cargo</th>
+    <div class="card shadow p-4 mb-4">
+        <h2 class="mb-4">Definir Permissões por Cargo</h2>
+        <form method="POST">
+            <table class="table table-bordered">
+                <thead>
+                    <tr>
+                        <th>Cargo</th>
+                        {% for field, label in PERMISSIONS %}
+                            <th>{{ label }}</th>
+                        {% endfor %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for role in roles %}
+                    <tr>
+                        <td>{{ role.capitalize() }}</td>
+                        {% if role == 'master' %}
                             {% for field, label in PERMISSIONS %}
-                                <th>{{ label }}</th>
+                                <td><input type="checkbox" checked disabled></td>
                             {% endfor %}
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for role in roles %}
-                        <tr>
-                            <td>{{ role.capitalize() }}</td>
-                            {% if role == 'master' %}
-                                {% for field, label in PERMISSIONS %}
-                                    <td><input type="checkbox" checked disabled></td>
-                                {% endfor %}
-                            {% else %}
-                                {% for field, label in PERMISSIONS %}
-                                    <td>
-                                        <input type="checkbox" name="{{ role }}_{{ field }}" {% if permissions.get(role) and getattr(permissions[role], field) %}checked{% endif %}>
-                                    </td>
-                                {% endfor %}
-                            {% endif %}
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-                <button type="submit" class="btn btn-success">Salvar Permissões</button>
-            </form>
-            {% with messages = get_flashed_messages() %}
-                {% if messages %}
-                    <div class="alert alert-info mt-3">
-                        {% for message in messages %}
-                            <div>{{ message }}</div>
-                        {% endfor %}
-                    </div>
-                {% endif %}
-            {% endwith %}
-        </div>
+                        {% else %}
+                            {% for field, label in PERMISSIONS %}
+                                <td>
+                                    <input type="checkbox" name="{{ role }}_{{ field }}" {% if permissions.get(role) and getattr(permissions[role], field) %}checked{% endif %}>
+                                </td>
+                            {% endfor %}
+                        {% endif %}
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            <button type="submit" class="btn btn-success">Salvar Permissões</button>
+        </form>
+        {% with messages = get_flashed_messages() %}
+            {% if messages %}
+                <div class="alert alert-info mt-3">
+                    {% for message in messages %}
+                        <div>{{ message }}</div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
     </div>
     {% endblock %}
 </body>
