@@ -26,7 +26,12 @@
         </div>
         <div class="col-md-2">
             <label for="filtro_setor" class="form-label">Setor</label>
-            <input type="text" class="form-control" id="filtro_setor" name="filtro_setor" value="{{ filtro_setor or '' }}" placeholder="Filtrar por setor">
+            <select class="form-select" id="filtro_setor" name="filtro_setor">
+                <option value="">Todos</option>
+                {% for setor in setores %}
+                    <option value="{{ setor.id }}" {% if filtro_setor == setor.id|string %}selected{% endif %}>{{ setor.nome }}</option>
+                {% endfor %}
+            </select>
         </div>
         <div class="col-md-2">
             <label for="filtro_turno" class="form-label">Turno</label>
@@ -48,7 +53,7 @@
     </form>
     <form method="POST">
         <div class="table-responsive">
-            <table class="table table-bordered table-hover table-sm align-middle">
+            <table class="table table-bordered table-hover table-sm align-middle" style="font-size:0.92rem;">
                 <thead class="table-primary">
                     <tr>
                         <th>Data</th>
@@ -63,6 +68,7 @@
                         <th>Empresa</th>
                         <th>Gestor</th>
                         <th>Status</th>
+                        <th>Ações</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -73,7 +79,7 @@
                         <td>{{ p.colaborador.cpf }}</td>
                         <td>{{ p.colaborador.funcao }}</td>
                         <td>{{ p.colaborador.admissao }}</td>
-                        <td>{{ p.colaborador.setor }}</td>
+                        <td>{{ p.colaborador.setor.nome if p.colaborador.setor else '' }}</td>
                         <td>{{ p.colaborador.turno }}</td>
                         <td>{{ p.colaborador.empregador }}</td>
                         <td>{{ p.colaborador.situacao }}</td>
@@ -89,6 +95,9 @@
                                 <option value="falta_injustificada" {% if p.status == 'falta_injustificada' %}selected{% endif %}>Falta Injustificada</option>
                             </select>
                         </td>
+                        <td>
+                            <button type="button" class="btn btn-sm btn-danger" onclick="excluirPresenca({{ p.id }})">Excluir</button>
+                        </td>
                     </tr>
                     {% endfor %}
                 </tbody>
@@ -96,6 +105,20 @@
         </div>
         <button type="submit" class="btn btn-success mt-3">Salvar Alterações</button>
     </form>
+    <form id="formExcluirPresenca" method="POST" style="display:none;">
+        {% if csrf_token %}
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        {% endif %}
+    </form>
+    <script>
+    function excluirPresenca(id) {
+        if(confirm('Excluir esta presença?')) {
+            var form = document.getElementById('formExcluirPresenca');
+            form.action = "{{ url_for('delete_presenca', presenca_id=0) }}".replace('0', id);
+            form.submit();
+        }
+    }
+    </script>
     {% with messages = get_flashed_messages() %}
         {% if messages %}
             <div class="alert alert-info mt-3">

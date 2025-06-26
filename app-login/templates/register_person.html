@@ -110,7 +110,7 @@
                 <td>{{ u.company.name if u.company else '-' }}</td>
                 <td>{{ 'Sim' if u.all_companies else 'Não' }}</td>
                 <td>{{ u.role }}</td>
-                <td>{{ u.setor or '-' }}</td>
+                <td>{{ u.setor.nome if u.setor else '-' }}</td>
                 <td>{{ 'Sim' if u.all_setores else 'Não' }}</td>
                 <td>{{ u.turno or '-' }}</td>
                 <td>{{ 'Sim' if u.all_turnos else 'Não' }}</td>

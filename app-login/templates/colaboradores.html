@@ -85,7 +85,7 @@
                         <td>{{ c.cpf }}</td>
                         <td>{{ c.funcao }}</td>
                         <td>{{ c.admissao }}</td>
-                        <td>{{ c.setor }}</td>
+                        <td>{{ c.setor.nome if c.setor else '' }}</td>
                         <td>{{ c.turno }}</td>
                         <td>{{ c.empregador }}</td>
                         <td>{{ c.situacao }}</td>

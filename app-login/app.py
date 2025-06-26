@@ -98,7 +98,18 @@ def register_person():
         company_id = request.form.get('company')
         all_companies = bool(request.form.get('all_companies'))
         role = request.form.get('role')
-        setor = request.form.get('setor')
+        setor_nome = request.form.get('setor')
+        turno = request.form.get('turno')
+        all_setores = bool(request.form.get('all_setores'))  # <-- Defina aqui!
+        all_turnos = bool(request.form.get('all_turnos'))    # <-- Defina aqui!
+
+        setor_obj = None
+        if setor_nome and not all_setores:
+            setor_obj = Setor.query.filter_by(nome=setor_nome.strip()).first()
+            if not setor_obj:
+                setor_obj = Setor(nome=setor_nome.strip())
+                db.session.add(setor_obj)
+                db.session.commit()
         turno = request.form.get('turno')
         all_setores = bool(request.form.get('all_setores'))
         all_turnos = bool(request.form.get('all_turnos'))
@@ -116,7 +127,7 @@ def register_person():
                 company_id=company_id,
                 all_companies=all_companies,
                 role=role,
-                setor=None if all_setores else setor,
+                setor=None if all_setores else setor_obj,  # Agora é objeto Setor!
                 turno=None if all_turnos else turno,
                 all_setores=all_setores,
                 all_turnos=all_turnos
@@ -373,13 +384,22 @@ def upload_colaboradores():
                 admissao = admissao.strftime('%d/%m/%Y')
         except Exception:
             continue
+        
+        setor_nome = row.get('Setor')
+        setor_obj = None
+        if setor_nome and str(setor_nome).strip():
+            setor_obj = Setor.query.filter_by(nome=str(setor_nome).strip()).first()
+            if not setor_obj:
+                setor_obj = Setor(nome=str(setor_nome).strip())
+                db.session.add(setor_obj)
+                db.session.commit()
 
         colaborador = Colaborador.query.filter_by(cpf=cpf).first()
         if colaborador:
             colaborador.nome = row.get('Nome')
             colaborador.funcao = row.get('Função')
             colaborador.admissao = admissao
-            colaborador.setor = row.get('Setor')
+            colaborador.setor = setor_obj
             colaborador.turno = row.get('Turno')
             colaborador.empregador = row.get('Empregador')
             colaborador.situacao = row.get('Situação')
@@ -391,7 +411,7 @@ def upload_colaboradores():
                 cpf=cpf,
                 funcao=row.get('Função'),
                 admissao=admissao,
-                setor=row.get('Setor'),
+                setor=setor_obj,
                 turno=row.get('Turno'),
                 empregador=row.get('Empregador'),
                 situacao=row.get('Situação'),
@@ -424,12 +444,21 @@ def add_colaborador():
     empresa_id = request.form.get('empresa_id')
     gestor = request.form.get('gestor')
 
+    setor_nome = request.form.get('setor')
+    setor_obj = None
+    if setor_nome and setor_nome.strip():
+        setor_obj = Setor.query.filter_by(nome=setor_nome.strip()).first()
+        if not setor_obj:
+            setor_obj = Setor(nome=setor_nome.strip())
+            db.session.add(setor_obj)
+            db.session.commit()
+
     colaborador = Colaborador(
         nome=nome,
         cpf=cpf,
         funcao=funcao,
         admissao=admissao,
-        setor=setor,
+        setor=setor_obj,  # <-- Agora é o objeto Setor!
         turno=turno,
         empregador=empregador,
         situacao=situacao,
@@ -551,20 +580,22 @@ def minhas_presencas():
     if g.user is None:
         return redirect(url_for('login'))
 
-    # Filtros
     filtro_nome = request.args.get('filtro_nome', '')
     filtro_empresa = request.args.get('filtro_empresa', '')
     filtro_setor = request.args.get('filtro_setor', '')
     filtro_turno = request.args.get('filtro_turno', '')
     filtro_data = request.args.get('filtro_data', '')
 
+    empresas = Company.query.all()
+    setores = Setor.query.all()
+
     query = Presenca.query.filter_by(usuario_id=g.user.id).join(Colaborador)
     if filtro_nome:
         query = query.filter(Colaborador.nome.ilike(f'%{filtro_nome}%'))
     if filtro_empresa:
-        query = query.filter(Colaborador.empresa_id == filtro_empresa)
+        query = query.filter(Colaborador.empresa_id == int(filtro_empresa))
     if filtro_setor:
-        query = query.filter(Colaborador.setor.ilike(f'%{filtro_setor}%'))
+        query = query.filter(Colaborador.setor_id == int(filtro_setor))
     if filtro_turno:
         query = query.filter(Colaborador.turno == filtro_turno)
     if filtro_data:
@@ -575,7 +606,6 @@ def minhas_presencas():
             pass
 
     presencas = query.order_by(Presenca.data.desc()).all()
-    empresas = Company.query.all()
 
     # Atualização dos status
     if request.method == 'POST':
@@ -598,6 +628,7 @@ def minhas_presencas():
         user=g.user,
         presencas=presencas,
         empresas=empresas,
+        setores=setores,
         filtro_nome=filtro_nome,
         filtro_empresa=filtro_empresa,
         filtro_setor=filtro_setor,
@@ -624,6 +655,17 @@ def register_sector():
         return redirect(url_for('register_sector'))
     setores = Setor.query.all()
     return render_template('register_sector.html', user=g.user, setores=setores)
+
+@app.route('/delete_presenca/<int:presenca_id>', methods=['POST'])
+def delete_presenca(presenca_id):
+    presenca = Presenca.query.get_or_404(presenca_id)
+    if presenca.usuario_id != g.user.id and g.user.role not in ['admin', 'master']:
+        flash('Sem permissão para excluir esta presença.')
+        return redirect(url_for('minhas_presencas'))
+    db.session.delete(presenca)
+    db.session.commit()
+    flash('Presença excluída com sucesso!')
+    return redirect(url_for('minhas_presencas'))
 
 if __name__ == '__main__':
     with app.app_context():
