@@ -1,6 +1,7 @@
 <div class="d-flex">
   <!-- Sidebar -->
-  <nav class="sidebar bg-primary text-white vh-100 p-2" style="width: 200px; min-width: 160px;">
+  <nav class="sidebar bg-primary text-white p-2 d-flex flex-column"
+       style="width: 220px; min-width: 220px; max-width: 220px; height: 100vh; position: fixed; left: 0; top: 0; bottom: 0; z-index: 1040; overflow-y: auto;">
     <h4 class="mb-3">RH App</h4>
     <input class="form-control mb-3" type="text" id="menuSearch" placeholder="Filtrar menu...">
     <ul class="nav flex-column" id="sidebarMenu">
@@ -11,17 +12,22 @@
       {% endif %}
       {% if user and has_permission(user, 'can_access_register_person') %}
       <li class="nav-item mb-1">
-        <a class="nav-link text-white" href="{{ url_for('register_person') }}">Cadastrar Pessoa</a>
+        <a class="nav-link text-white" href="{{ url_for('register_person') }}">Cadastrar Usuário</a>
       </li>
       {% endif %}
       {% if user and has_permission(user, 'can_access_register_company') %}
       <li class="nav-item mb-1">
-        <a class="nav-link text-white" href="{{ url_for('register_company') }}">Cadastrar Empresa</a>
+        <a class="nav-link text-white" href="{{ url_for('register_company') }}">Cadastrar Empresa</a> 
       </li>
       {% endif %}
       {% if user and has_permission(user, 'can_access_colaboradores') %}
       <li class="nav-item mb-1">
         <a class="nav-link text-white" href="{{ url_for('colaboradores') }}">Colaboradores</a>
+      </li>
+      {% endif %}
+      {% if user and has_permission(user, 'can_access_lista_presenca') %}
+      <li class="nav-item mb-1">
+        <a class="nav-link text-white" href="{{ url_for('lista_presenca') }}">Lista de Presença</a>
       </li>
       {% endif %}
       {% if user and (user.role == 'admin' or user.role == 'master' or user.username == 'luftsolutions.extrema') %}
@@ -30,17 +36,33 @@
       </li>
       {% endif %}
     </ul>
-    <div class="mt-auto pt-3 border-top border-light">
+    <div class="mt-auto d-flex flex-column justify-content-end align-items-center"
+         style="height: 180px; width: 100%; padding-bottom: 24px;">
       {% if user %}
-        <span>{{ user.username }}</span><br>
-        <a href="{{ url_for('logout') }}" class="text-white text-decoration-underline">Sair</a>
+        <div class="mb-2 w-100 d-flex align-items-center justify-content-center flex-column">
+          <span class="mb-1" style="font-size: 1.1rem;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" fill="#fff" class="bi bi-person-fill" viewBox="0 0 16 16" style="vertical-align:middle;">
+              <path d="M3 14s-1 0-1-1 1-4 6-4 6 3 6 4-1 1-1 1H3zm5-6a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"/>
+            </svg>
+          </span>
+          <span style="font-size: 1.05rem;">{{ user.username }}</span>
+        </div>
+        <a href="{{ url_for('logout') }}" title="Sair"
+           class="btn btn-lg w-100 d-flex align-items-center justify-content-center"
+           style="background: none; border: none; color: #dc3545; font-size: 1.5rem;">
+          <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" style="vertical-align:middle; margin-right: 10px;" viewBox="0 0 16 16">
+            <path fill="#dc3545" d="M10 12.5a.5.5 0 0 1-.5.5h-7a.5.5 0 0 1-.5-.5v-9a.5.5 0 0 1 .5-.5h7a.5.5 0 0 1 .5.5v2a.5.5 0 0 0 1 0v-2A1.5 1.5 0 0 0 9.5 2h-7A1.5 1.5 0 0 0 1 3.5v9A1.5 1.5 0 0 0 2.5 14h7a1.5 1.5 0 0 0 1.5-1.5v-2a.5.5 0 0 0-1 0v2z"/>
+            <path fill="#dc3545" d="M15.854 8.354a.5.5 0 0 0 0-.708l-3-3a.5.5 0 1 0-.708.708L14.293 7.5H5.5a.5.5 0 0 0 0 1h8.793l-2.147 2.146a.5.5 0 0 0 .708.708l3-3z"/>
+          </svg>
+          <span style="color:#dc3545; font-weight:600;">Sair</span>
+        </a>
       {% endif %}
     </div>
   </nav>
   <!-- /Sidebar -->
 
   <!-- Conteúdo principal -->
-  <div class="flex-grow-1" style="min-height: 100vh; padding: 12px 8px 8px 8px;">
+  <div class="flex-grow-1" style="min-height: 100vh; padding: 12px 8px 8px 8px; margin-left: 220px;">
     {% block content %}{% endblock %}
   </div>
 </div>

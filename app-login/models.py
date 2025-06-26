@@ -27,6 +27,7 @@ class Permission(db.Model):
     can_access_register_company = db.Column(db.Boolean, default=False)
     can_access_colaboradores = db.Column(db.Boolean, default=False)
     can_access_permissions = db.Column(db.Boolean, default=False)
+    can_access_lista_presenca = db.Column(db.Boolean, default=False)  # NOVO
 
 class Colaborador(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -41,3 +42,13 @@ class Colaborador(db.Model):
     empresa_id = db.Column(db.Integer, db.ForeignKey('company.id'), nullable=False)
     empresa = db.relationship('Company')
     gestor = db.Column(db.String(150))
+
+class Presenca(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    colaborador_id = db.Column(db.Integer, db.ForeignKey('colaborador.id'), nullable=False)
+    usuario_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    data = db.Column(db.Date, nullable=False)
+    status = db.Column(db.String(30), nullable=False, default='ausente')
+
+    colaborador = db.relationship('Colaborador')
+    usuario = db.relationship('User')

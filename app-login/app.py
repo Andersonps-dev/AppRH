@@ -1,10 +1,10 @@
 from flask import Flask, render_template, request, redirect, url_for, session, flash, g, send_file
 from werkzeug.security import generate_password_hash, check_password_hash
-from models import db, User, Company, Permission, Colaborador
+from models import db, User, Company, Permission, Colaborador, Presenca  # Adicione Presenca aqui
 import os
 from dotenv import load_dotenv
 import pandas as pd
-from datetime import datetime
+from datetime import datetime, date
 import io
 
 app = Flask(__name__)
@@ -27,6 +27,7 @@ PERMISSIONS = [
     ('can_access_register_person', 'Acessa Cadastro Pessoa'),
     ('can_access_register_company', 'Acessa Cadastro Empresa'),
     ('can_access_colaboradores', 'Acessa Colaboradores'),
+    ('can_access_lista_presenca', 'Acessa Lista de Presença'),
     ('can_access_permissions', 'Acessa Permissões'),
 ]
 
@@ -256,7 +257,7 @@ def colaboradores():
 
     companies = Company.query.all()
     turnos = ['1º TURNO', '2º TURNO', 'COMERCIAL', '3º TURNO']
-    status_list = ['Ativo', 'Inativo']
+    status_list = ['ATIVO', 'INATIVO']
 
     # Filtros
     filtro_nome = request.args.get('filtro_nome', '')
@@ -472,6 +473,77 @@ def delete_colaborador(colaborador_id):
     db.session.commit()
     flash('Colaborador excluído com sucesso!')
     return redirect(url_for('colaboradores'))
+
+@app.route('/lista_presenca', methods=['GET', 'POST'])
+def lista_presenca():
+    if g.user is None:
+        return redirect(url_for('login'))
+    if not has_permission(g.user, 'can_access_lista_presenca'):
+        flash('Sem acesso. Entre em contato: analiseoperacional.extrema@luftsolutions.com.br')
+        return redirect(url_for('index'))
+
+    # Filtros do usuário logado
+    user = g.user
+    empresa_id = user.company_id if not user.all_companies else None
+    setor = user.setor if not user.all_setores else None
+    turno = user.turno if not user.all_turnos else None
+
+    # Data selecionada
+    data_str = request.form.get('data') if request.method == 'POST' else request.args.get('data')
+    if data_str:
+        try:
+            data_selecionada = datetime.strptime(data_str, '%Y-%m-%d').date()
+        except Exception:
+            data_selecionada = date.today()
+    else:
+        data_selecionada = date.today()
+
+    # Busca colaboradores conforme permissão do usuário
+    query = Colaborador.query
+    if empresa_id:
+        query = query.filter(Colaborador.empresa_id == empresa_id)
+    if setor:
+        query = query.filter(Colaborador.setor == setor)
+    if turno:
+        query = query.filter(Colaborador.turno == turno)
+    colaboradores = query.order_by(Colaborador.nome).all()
+
+    # Salvar presença
+    if request.method == 'POST':
+        for colaborador in colaboradores:
+            status = request.form.get(f'status_{colaborador.id}', 'ausente')
+            presenca = Presenca.query.filter_by(
+                colaborador_id=colaborador.id,
+                data=data_selecionada
+            ).first()
+            if presenca:
+                presenca.status = status
+                presenca.usuario_id = user.id
+            else:
+                presenca = Presenca(
+                    colaborador_id=colaborador.id,
+                    usuario_id=user.id,
+                    data=data_selecionada,
+                    status=status
+                )
+                db.session.add(presenca)
+        db.session.commit()
+        flash('Lista de presença salva com sucesso!')
+        return redirect(url_for('lista_presenca', data=data_selecionada.strftime('%Y-%m-%d')))
+
+    # Buscar presenças já salvas para a data
+    presencas = {p.colaborador_id: p for p in Presenca.query.filter(
+        Presenca.data == data_selecionada,
+        Presenca.colaborador_id.in_([c.id for c in colaboradores])
+    ).all()}
+
+    return render_template(
+        'lista_presenca.html',
+        user=user,
+        colaboradores=colaboradores,
+        presencas=presencas,
+        data_selecionada=data_selecionada
+    )
 
 if __name__ == '__main__':
     with app.app_context():
