@@ -545,6 +545,65 @@ def lista_presenca():
         data_selecionada=data_selecionada
     )
 
+@app.route('/minhas_presencas', methods=['GET', 'POST'])
+def minhas_presencas():
+    if g.user is None:
+        return redirect(url_for('login'))
+
+    # Filtros
+    filtro_nome = request.args.get('filtro_nome', '')
+    filtro_empresa = request.args.get('filtro_empresa', '')
+    filtro_setor = request.args.get('filtro_setor', '')
+    filtro_turno = request.args.get('filtro_turno', '')
+    filtro_data = request.args.get('filtro_data', '')
+
+    query = Presenca.query.filter_by(usuario_id=g.user.id).join(Colaborador)
+    if filtro_nome:
+        query = query.filter(Colaborador.nome.ilike(f'%{filtro_nome}%'))
+    if filtro_empresa:
+        query = query.filter(Colaborador.empresa_id == filtro_empresa)
+    if filtro_setor:
+        query = query.filter(Colaborador.setor.ilike(f'%{filtro_setor}%'))
+    if filtro_turno:
+        query = query.filter(Colaborador.turno == filtro_turno)
+    if filtro_data:
+        try:
+            data_filtro = datetime.strptime(filtro_data, '%Y-%m-%d').date()
+            query = query.filter(Presenca.data == data_filtro)
+        except Exception:
+            pass
+
+    presencas = query.order_by(Presenca.data.desc()).all()
+    empresas = Company.query.all()
+
+    # Atualização dos status
+    if request.method == 'POST':
+        for p in presencas:
+            novo_status = request.form.get(f'status_{p.id}')
+            if novo_status and novo_status != p.status:
+                p.status = novo_status
+        db.session.commit()
+        flash('Presenças atualizadas com sucesso!')
+        return redirect(url_for('minhas_presencas', 
+            filtro_nome=filtro_nome, 
+            filtro_empresa=filtro_empresa, 
+            filtro_setor=filtro_setor, 
+            filtro_turno=filtro_turno, 
+            filtro_data=filtro_data
+        ))
+
+    return render_template(
+        'minhas_presencas.html',
+        user=g.user,
+        presencas=presencas,
+        empresas=empresas,
+        filtro_nome=filtro_nome,
+        filtro_empresa=filtro_empresa,
+        filtro_setor=filtro_setor,
+        filtro_turno=filtro_turno,
+        filtro_data=filtro_data
+    )
+
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()

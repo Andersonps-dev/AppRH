@@ -29,6 +29,9 @@
       <li class="nav-item mb-1">
         <a class="nav-link text-white" href="{{ url_for('lista_presenca') }}">Lista de Presença</a>
       </li>
+      <li class="nav-item mb-1">
+        <a class="nav-link text-white" href="{{ url_for('minhas_presencas') }}">Minhas Presenças</a>
+      </li>
       {% endif %}
       {% if user and (user.role == 'admin' or user.role == 'master' or user.username == 'luftsolutions.extrema') %}
       <li class="nav-item mb-1">
