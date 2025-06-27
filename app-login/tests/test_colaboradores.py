@@ -1,12 +1,11 @@
 def test_colaboradores_page(client):
-    resp = client.get('/colaboradores')
-    assert resp.status_code in (200, 302)
-
-# Para testar cadastro, descomente e ajuste conforme seu modelo e autenticação:
-def test_add_colaborador(client):
-    # Login
     client.post('/login', data={'username': 'admin', 'password': 'admin', 'company': 1})
-    # Crie setor e empresa se necessário
+    resp = client.get('/colaboradores')
+    assert resp.status_code == 200
+
+def test_add_colaborador(client):
+    client.post('/login', data={'username': 'admin', 'password': 'admin', 'company': 1})
+    # Busca ids válidos
     from models import Setor, Company
     with client.application.app_context():
         setor = Setor.query.first()
