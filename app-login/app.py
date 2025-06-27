@@ -718,11 +718,9 @@ def delete_presenca(presenca_id):
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()
-        # Cria empresa "Luft" se não existir
         if not Company.query.filter_by(name='LUFT').first():
             db.session.add(Company(name='LUFT'))
             db.session.commit()
-        # Cria ou atualiza o usuário master
         master = User.query.filter_by(username=MASTER_USER).first()
         if not master:
             master = User(
