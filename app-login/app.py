@@ -604,7 +604,18 @@ def minhas_presencas():
     empresas = Company.query.all()
     setores = Setor.query.all()
 
-    query = Presenca.query.filter_by(usuario_id=g.user.id).join(Colaborador)
+    # Busca presenças baseadas nos filtros do usuário, não só pelo usuario_id
+    query = Presenca.query.join(Colaborador)
+
+    # Filtros do usuário logado
+    if not g.user.all_companies and g.user.company_id:
+        query = query.filter(Colaborador.empresa_id == g.user.company_id)
+    if not g.user.all_setores and g.user.setor_id:
+        query = query.filter(Colaborador.setor_id == g.user.setor_id)
+    if not g.user.all_turnos and g.user.turno:
+        query = query.filter(Colaborador.turno == g.user.turno)
+
+    # Filtros da tela
     if filtro_nome:
         query = query.filter(Colaborador.nome.ilike(f'%{filtro_nome}%'))
     if filtro_empresa:

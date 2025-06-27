@@ -17,8 +17,13 @@
                 <input type="date" id="data" name="data" class="form-control"
                        value="{{ data_selecionada.strftime('%Y-%m-%d') }}">
             </div>
-            <div class="col-md-2 mb-3">
-                <button type="submit" class="btn btn-primary w-100">Filtrar</button>
+            <div class="col-md-2">
+                <select name="filtro_setor" class="form-select">
+                    <option value="">Todos Setores</option>
+                    {% for setor in setores %}
+                        <option value="{{ setor.id }}" {% if filtro_setor == setor.id|string %}selected{% endif %}>{{ setor.nome }}</option>
+                    {% endfor %}
+                </select>
             </div>
         </div>
         <div class="table-responsive">
@@ -35,7 +40,7 @@
                         <td>{{ c.nome }}</td>
                         <td>
                             <select name="status_{{ c.id }}" class="form-select">
-                                {% set status_val = presencas.get(c.id).status if presencas.get(c.id) else 'ausente' %}
+                                {% set status_val = 'ausente' if presencas.get(c.id) else 'ausente' %}
                                 <option value="ausente" {% if status_val == 'ausente' %}selected{% endif %}>Ausente</option>
                                 <option value="presente" {% if status_val == 'presente' %}selected{% endif %}>Presente</option>
                                 <option value="atestado" {% if status_val == 'atestado' %}selected{% endif %}>Atestado</option>
@@ -62,4 +67,10 @@
     {% endwith %}
 </div>
 {% endblock %}
+<script>
+document.getElementById('data').addEventListener('change', function() {
+    this.form.submit();
+});
+</script>
 </body>
+</html>
