@@ -1,6 +1,7 @@
 import pytest
 from app import app, db
-from models import Company
+from models import Company, User
+from werkzeug.security import generate_password_hash
 
 @pytest.fixture
 def client():
@@ -11,6 +12,9 @@ def client():
             db.create_all()
             company = Company(name='LUFT')
             db.session.add(company)
+            db.session.commit()
+            user = User(username='admin', password=generate_password_hash('admin'), company_id=company.id)
+            db.session.add(user)
             db.session.commit()
         yield client
         with app.app_context():

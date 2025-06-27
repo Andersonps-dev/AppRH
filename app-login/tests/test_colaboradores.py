@@ -2,7 +2,7 @@ def test_colaboradores_page(client):
     resp = client.get('/colaboradores')
     assert resp.status_code in (200, 302)
 
-# Para testar cadastro, ajuste conforme seu modelo e autenticação:
+# Para testar cadastro, descomente e ajuste conforme seu modelo e autenticação:
 # def test_add_colaborador(client):
 #     client.post('/login', data={'username': 'admin', 'password': 'admin', 'company': 1})
 #     resp = client.post('/add_colaborador', data={
