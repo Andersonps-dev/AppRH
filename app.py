@@ -8,6 +8,8 @@ import pandas as pd
 from datetime import datetime, date
 import io
 
+from config import *
+
 app = Flask(__name__)
 
 app.config['SECRET_KEY'] = 'admin_anderson_luft'
@@ -17,9 +19,10 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db.init_app(app)
 migrate = Migrate(app, db)
 
-load_dotenv()
-MASTER_USER = "luftsolutions.extrema"
-MASTER_PASS = "luftsolutions.extrema"
+#load_dotenv()
+
+MASTER_USER = master_user
+MASTER_PASS = master_pass
 
 if not MASTER_USER or not MASTER_PASS:
     raise RuntimeError("MASTER_USER e MASTER_PASS precisam estar definidos no .env")
