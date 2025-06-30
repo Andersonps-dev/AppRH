@@ -18,8 +18,8 @@ db.init_app(app)
 migrate = Migrate(app, db)
 
 load_dotenv()
-MASTER_USER = os.getenv('master_user')
-MASTER_PASS = os.getenv('master_pass')
+MASTER_USER = "luftsolutions.extrema"
+MASTER_PASS = "luftsolutions.extrema"
 
 if not MASTER_USER or not MASTER_PASS:
     raise RuntimeError("MASTER_USER e MASTER_PASS precisam estar definidos no .env")
