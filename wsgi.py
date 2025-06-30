@@ -1,6 +1,6 @@
 import sys
-import os
 
-sys.path.insert(0, os.path.dirname(__file__))
-
+path = '/home/appLuftextrema/AppRH'
+if path not in sys.path:
+    sys.path.append(path)
 from app import app as application
