@@ -495,12 +495,14 @@ def edit_colaborador(colaborador_id):
         return redirect(url_for('index'))
     colaborador = Colaborador.query.get_or_404(colaborador_id)
     companies = Company.query.all()
+    setores = Setor.query.order_by(Setor.nome).all()  # Adicione esta linha
     if request.method == 'POST':
         colaborador.nome = request.form.get('nome')
         colaborador.cpf = request.form.get('cpf')
         colaborador.funcao = request.form.get('funcao')
         colaborador.admissao = request.form.get('admissao')
-        colaborador.setor = request.form.get('setor')
+        setor_id = request.form.get('setor_id')
+        colaborador.setor = Setor.query.get(setor_id) if setor_id else None
         colaborador.turno = request.form.get('turno')
         colaborador.empregador = request.form.get('empregador')
         colaborador.situacao = request.form.get('situacao')
@@ -509,7 +511,7 @@ def edit_colaborador(colaborador_id):
         db.session.commit()
         flash('Colaborador atualizado com sucesso!')
         return redirect(url_for('colaboradores'))
-    return render_template('edit_colaborador.html', user=g.user, colaborador=colaborador, companies=companies)
+    return render_template('edit_colaborador.html', user=g.user, colaborador=colaborador, companies=companies, setores=setores)
 
 @app.route('/delete_colaborador/<int:colaborador_id>')
 def delete_colaborador(colaborador_id):
@@ -530,14 +532,24 @@ def lista_presenca():
         flash('Sem acesso. Entre em contato: analiseoperacional.extrema@luftsolutions.com.br')
         return redirect(url_for('index'))
 
-    # Filtros do usuário logado
     user = g.user
     empresa_id = user.company_id if not user.all_companies else None
     setor = user.setor if not user.all_setores else None
     turno = user.turno if not user.all_turnos else None
 
-    # Data selecionada
-    data_str = request.form.get('data') if request.method == 'POST' else request.args.get('data')
+    setores = Setor.query.order_by(Setor.nome).all()
+
+    # Use o valor do POST se for POST, senão do GET
+    if request.method == 'POST':
+        data_str = request.form.get('data')
+        filtro_setor = request.form.get('filtro_setor')
+    else:
+        data_str = request.args.get('data')
+        filtro_setor = request.args.get('filtro_setor')
+
+    if filtro_setor in [None, '', 'None']:
+        filtro_setor = None
+
     if data_str:
         try:
             data_selecionada = datetime.strptime(data_str, '%Y-%m-%d').date()
@@ -546,7 +558,6 @@ def lista_presenca():
     else:
         data_selecionada = date.today()
 
-    # Busca colaboradores conforme permissão do usuário
     query = Colaborador.query
     if empresa_id:
         query = query.filter(Colaborador.empresa_id == empresa_id)
@@ -554,6 +565,8 @@ def lista_presenca():
         query = query.filter(Colaborador.setor == setor)
     if turno:
         query = query.filter(Colaborador.turno == turno)
+    if filtro_setor:
+        query = query.filter(Colaborador.setor_id == int(filtro_setor))
     colaboradores = query.order_by(Colaborador.nome).all()
 
     # Salvar presença
@@ -577,7 +590,7 @@ def lista_presenca():
                 db.session.add(presenca)
         db.session.commit()
         flash('Lista de presença salva com sucesso!')
-        return redirect(url_for('lista_presenca', data=data_selecionada.strftime('%Y-%m-%d')))
+        return redirect(url_for('lista_presenca', data=data_selecionada.strftime('%Y-%m-%d'), filtro_setor=filtro_setor))
 
     # Buscar presenças já salvas para a data
     presencas = {p.colaborador_id: p for p in Presenca.query.filter(
@@ -590,7 +603,9 @@ def lista_presenca():
         user=user,
         colaboradores=colaboradores,
         presencas=presencas,
-        data_selecionada=data_selecionada
+        data_selecionada=data_selecionada,
+        setores=setores,
+        filtro_setor=filtro_setor
     )
 
 @app.route('/minhas_presencas', methods=['GET', 'POST'])
@@ -603,11 +618,11 @@ def minhas_presencas():
     filtro_setor = request.args.get('filtro_setor', '')
     filtro_turno = request.args.get('filtro_turno', '')
     filtro_data = request.args.get('filtro_data', '')
+    filtro_gestor = request.args.get('filtro_gestor', '')  # Novo filtro
 
     empresas = Company.query.all()
     setores = Setor.query.all()
 
-    # Busca presenças baseadas nos filtros do usuário, não só pelo usuario_id
     query = Presenca.query.join(Colaborador)
 
     # Filtros do usuário logado
@@ -633,6 +648,8 @@ def minhas_presencas():
             query = query.filter(Presenca.data == data_filtro)
         except Exception:
             pass
+    if filtro_gestor:
+        query = query.filter(Colaborador.gestor.ilike(f'%{filtro_gestor}%'))
 
     presencas = query.order_by(Presenca.data.desc()).all()
 
@@ -662,7 +679,8 @@ def minhas_presencas():
         filtro_empresa=filtro_empresa,
         filtro_setor=filtro_setor,
         filtro_turno=filtro_turno,
-        filtro_data=filtro_data
+        filtro_data=filtro_data,
+        filtro_gestor=filtro_gestor
     )
 
 @app.route('/register_sector', methods=['GET', 'POST'])
@@ -717,6 +735,64 @@ def delete_presenca(presenca_id):
     db.session.commit()
     flash('Presença excluída com sucesso!')
     return redirect(url_for('minhas_presencas'))
+
+@app.route('/export_minhas_presencas')
+def export_minhas_presencas():
+    if g.user is None:
+        flash('Sem acesso.')
+        return redirect(url_for('login'))
+
+    filtro_nome = request.args.get('filtro_nome', '')
+    filtro_empresa = request.args.get('filtro_empresa', '')
+    filtro_setor = request.args.get('filtro_setor', '')
+    filtro_turno = request.args.get('filtro_turno', '')
+    filtro_data = request.args.get('filtro_data', '')
+    filtro_gestor = request.args.get('filtro_gestor', '')
+
+    query = Presenca.query.join(Colaborador)
+    if not g.user.all_companies and g.user.company_id:
+        query = query.filter(Colaborador.empresa_id == g.user.company_id)
+    if not g.user.all_setores and g.user.setor_id:
+        query = query.filter(Colaborador.setor_id == g.user.setor_id)
+    if not g.user.all_turnos and g.user.turno:
+        query = query.filter(Colaborador.turno == g.user.turno)
+    if filtro_nome:
+        query = query.filter(Colaborador.nome.ilike(f'%{filtro_nome}%'))
+    if filtro_empresa:
+        query = query.filter(Colaborador.empresa_id == int(filtro_empresa))
+    if filtro_setor:
+        query = query.filter(Colaborador.setor_id == int(filtro_setor))
+    if filtro_turno:
+        query = query.filter(Colaborador.turno == filtro_turno)
+    if filtro_data:
+        try:
+            data_filtro = datetime.strptime(filtro_data, '%Y-%m-%d').date()
+            query = query.filter(Presenca.data == data_filtro)
+        except Exception:
+            pass
+    if filtro_gestor:
+        query = query.filter(Colaborador.gestor.ilike(f'%{filtro_gestor}%'))
+
+    presencas = query.order_by(Presenca.data.desc()).all()
+
+    data = []
+    for p in presencas:
+        data.append({
+            'Data': p.data.strftime('%d/%m/%Y'),
+            'Nome': p.colaborador.nome,
+            'CPF': p.colaborador.cpf,
+            'Setor': p.colaborador.setor.nome if p.colaborador.setor else '',
+            'Turno': p.colaborador.turno,
+            'Empresa': p.colaborador.empresa.name if p.colaborador.empresa else '',
+            'Gestor': p.colaborador.gestor,
+            'Status': p.status
+        })
+    df = pd.DataFrame(data)
+    output = io.BytesIO()
+    with pd.ExcelWriter(output, engine='openpyxl') as writer:
+        df.to_excel(writer, index=False)
+    output.seek(0)
+    return send_file(output, download_name="minhas_presencas.xlsx", as_attachment=True)
 
 if __name__ == '__main__':
     with app.app_context():
