@@ -19,7 +19,7 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db.init_app(app)
 migrate = Migrate(app, db)
 
-#load_dotenv()
+load_dotenv()
 
 MASTER_USER = master_user
 MASTER_PASS = master_pass
