@@ -97,20 +97,21 @@ def register_person():
         flash('Sem acesso. Entre em contato: analiseoperacional.extrema@luftsolutions.com.br')
         return redirect(url_for('index'))
     companies = Company.query.all()
+    setores = Setor.query.order_by(Setor.nome).all()  # <-- Adicione esta linha
     if request.method == 'POST':
         username = request.form['username']
         password = request.form['password']
         company_id = request.form.get('company')
         all_companies = bool(request.form.get('all_companies'))
         role = request.form.get('role')
-        setor_nome = request.form.get('setor')
+        setor_id = request.form.get('setor')  # Agora pega o id do setor
         turno = request.form.get('turno')
         all_setores = bool(request.form.get('all_setores'))  # <-- Defina aqui!
         all_turnos = bool(request.form.get('all_turnos'))    # <-- Defina aqui!
 
         setor_obj = None
-        if setor_nome and not all_setores:
-            setor_obj = Setor.query.filter_by(nome=setor_nome.strip()).first()
+        if setor_id and not all_setores:
+            setor_obj = Setor.query.get(setor_id)
             if not setor_obj:
                 setor_obj = Setor(nome=setor_nome.strip())
                 db.session.add(setor_obj)
@@ -142,7 +143,7 @@ def register_person():
             flash('Usuário cadastrado com sucesso!')
         return redirect(url_for('register_person'))
     users = User.query.all()
-    return render_template('register_person.html', user=g.user, companies=companies, users=users)
+    return render_template('register_person.html', user=g.user, companies=companies, users=users, setores=setores)
 
 @app.route('/register_company', methods=['GET', 'POST'])
 def register_company():
