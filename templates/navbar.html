@@ -41,27 +41,15 @@
           </li>
           {% endif %}
 
-          {% set pode_cadastro = (
-            has_permission(user, 'can_access_register_person') or
-            has_permission(user, 'can_access_register_company') or
-            has_permission(user, 'can_access_register_sector')
-          ) %}
-          {% if user and pode_cadastro %}
-          <li class="nav-item dropdown">
-            <a class="nav-link dropdown-toggle" href="#" id="cadastrosDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-              Cadastros
-            </a>
-            <ul class="dropdown-menu" aria-labelledby="cadastrosDropdown">
-              {% if has_permission(user, 'can_access_register_person') %}
-              <li><a class="dropdown-item" href="{{ url_for('register_person') }}">Cadastrar Usuário</a></li>
-              {% endif %}
-              {% if has_permission(user, 'can_access_register_company') %}
-              <li><a class="dropdown-item" href="{{ url_for('register_company') }}">Cadastrar Empresa</a></li>
-              {% endif %}
-              {% if has_permission(user, 'can_access_register_sector') %}
-              <li><a class="dropdown-item" href="{{ url_for('register_sector') }}">Cadastrar Setor</a></li>
-              {% endif %}
-            </ul>
+          {% if user and has_permission(user, 'can_access_register_user') %}
+          <li class="nav-item">
+            <a class="nav-link" href="{{ url_for('register_user') }}">Cadastrar Usuário</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="{{ url_for('empresas') }}">Empresas</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="{{ url_for('setores') }}">Setores</a>
           </li>
           {% endif %}
 
@@ -89,25 +77,5 @@
     {% block content %}{% endblock %}
   </div>
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-  <script>
-    // Script de diagnóstico
-    document.addEventListener('DOMContentLoaded', function() {
-      // Verificar se o Bootstrap está carregado
-      if (typeof bootstrap === 'undefined') {
-        console.error('Erro: Bootstrap JavaScript não foi carregado.');
-      } else {
-        console.log('Bootstrap carregado com sucesso.');
-        // Verificar inicialização do dropdown
-        const dropdown = document.querySelector('#cadastrosDropdown');
-        if (dropdown) {
-          dropdown.addEventListener('click', function() {
-            console.log('Dropdown clicado. Aria-expanded:', dropdown.getAttribute('aria-expanded'));
-          });
-        } else {
-          console.warn('Dropdown "Cadastros" não encontrado no DOM.');
-        }
-      }
-    });
-  </script>
 </body>
 </html>

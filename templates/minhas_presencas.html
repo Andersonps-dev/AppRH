@@ -23,21 +23,11 @@
         </div>
         <div class="col-md-2">
             <label for="filtro_empresa" class="form-label">Empresa</label>
-            <select class="form-select" id="filtro_empresa" name="filtro_empresa">
-                <option value="">Todas</option>
-                {% for empresa in empresas %}
-                    <option value="{{ empresa.id }}" {% if filtro_empresa == empresa.id|string %}selected{% endif %}>{{ empresa.name }}</option>
-                {% endfor %}
-            </select>
+            <input type="text" class="form-control" id="filtro_empresa" name="filtro_empresa" value="{{ filtro_empresa or '' }}" placeholder="Filtrar por empresa">
         </div>
         <div class="col-md-2">
             <label for="filtro_setor" class="form-label">Setor</label>
-            <select class="form-select" id="filtro_setor" name="filtro_setor">
-                <option value="">Todos</option>
-                {% for setor in setores %}
-                    <option value="{{ setor.id }}" {% if filtro_setor == setor.id|string %}selected{% endif %}>{{ setor.nome }}</option>
-                {% endfor %}
-            </select>
+            <input type="text" class="form-control" id="filtro_setor" name="filtro_setor" value="{{ filtro_setor or '' }}" placeholder="Filtrar por setor">
         </div>
         <div class="col-md-2">
             <label for="filtro_turno" class="form-label">Turno</label>
@@ -53,19 +43,27 @@
             <label for="filtro_data" class="form-label">Data</label>
             <input type="date" class="form-control" id="filtro_data" name="filtro_data" value="{{ filtro_data or '' }}">
         </div>
-        <div class="col-md-2 d-flex align-items-end gap-2">
-            <button class="btn btn-primary w-100" type="submit">Filtrar</button>
-            <a href="{{ url_for('export_minhas_presencas', filtro_nome=filtro_nome, filtro_empresa=filtro_empresa, filtro_setor=filtro_setor, filtro_turno=filtro_turno, filtro_data=filtro_data, filtro_gestor=filtro_gestor) }}" class="btn btn-success w-100">Exportar</a>
+        <div class="col-md-3 d-flex align-items-end gap-2">
+            <button class="btn btn-primary" type="submit">Filtrar</button>
+            <a href="{{ url_for('minhas_presencas') }}" class="btn btn-secondary">Limpar Filtros</a>
+            <a href="{{ url_for('export_minhas_presencas',
+                filtro_nome=filtro_nome,
+                filtro_empresa=filtro_empresa,
+                filtro_setor=filtro_setor,
+                filtro_turno=filtro_turno,
+                filtro_data=filtro_data,
+                filtro_gestor=filtro_gestor
+            ) }}" class="btn btn-success">Exportar</a>
         </div>
-    {% with messages = get_flashed_messages() %}
-        {% if messages %}
-            <div class="alert alert-info mt-3">
-                {% for message in messages %}
-                    <div>{{ message }}</div>
-                {% endfor %}
-            </div>
-        {% endif %}
-    {% endwith %}
+        {% with messages = get_flashed_messages() %}
+            {% if messages %}
+                <div class="alert alert-info mt-3">
+                    {% for message in messages %}
+                        <div>{{ message }}</div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
     </form>
     <form method="POST">
         <div class="table-responsive">
@@ -119,7 +117,7 @@
                 </tbody>
             </table>
         </div>
-        <button type="submit" class="btn btn-success mt-3">Salvar Alterações</button>
+        <button type="submit" class="btn btn-success mt-3">Salvar</button>
     </form>
     <form id="formExcluirPresenca" method="POST" style="display:none;">
         {% if csrf_token %}
