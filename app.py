@@ -293,7 +293,10 @@ def colaboradores():
     if filtro_status:
         query = query.filter(Colaborador.situacao.ilike(f'%{filtro_status}%'))
     if filtro_setor:
-        query = query.filter(Colaborador.setor_id == int(filtro_setor))
+        try:
+            query = query.filter(Colaborador.setor_id == int(filtro_setor))
+        except ValueError:
+            pass  # Ignora filtro inválido
     if filtro_gestor:
         query = query.filter(Colaborador.gestor.ilike(f'%{filtro_gestor}%'))
     colaboradores = query.all()
