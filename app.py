@@ -408,7 +408,7 @@ def upload_colaboradores():
 
         setor_nome = row.get('Setor')
         setor_obj = None
-        if setor_nome and str(setor_nome).strip():
+        if setor_nome and setor_nome.strip():
             setor_obj = Setor.query.filter_by(nome=str(setor_nome).strip()).first()
             if not setor_obj:
                 setores_nao_cadastrados.add(str(setor_nome).strip())
