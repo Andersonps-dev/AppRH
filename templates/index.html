@@ -7,10 +7,9 @@
 </head>
 <body class="bg-light">
     {% include 'navbar.html' %}
-    <div class="container mt-5">
+    <div class="container-fluid mt-3">
         <div class="card shadow p-4">
             <h2>Bem-vindo, {{ user.nome_completo }}!</h2>
-            <a href="{{ url_for('logout') }}" class="btn btn-danger mt-3">Sair</a>
         </div>
     </div>
 </body>
