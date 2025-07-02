@@ -8,6 +8,7 @@ from dotenv import load_dotenv
 import pandas as pd
 from datetime import datetime, date
 import io
+from functools import wraps
 
 from config import *
 
@@ -60,14 +61,12 @@ def login():
     return render_template('login.html', error=error)
 
 @app.route('/index')
+@login_required
 def index():
-    if 'user_id' not in session:
-        return redirect(url_for('login'))
-    user = User.query.get(session['user_id'])
-    if not has_permission(user, 'can_access_index'):
+    if not has_permission(g.user, 'can_access_index'):
         flash('Sem acesso. Entre em contato: analiseoperacional.extrema@luftsolutions.com.br')
         return redirect(url_for('login'))
-    return render_template('index.html', user=user)
+    return render_template('index.html', user=g.user)
 
 @app.before_request
 def load_logged_in_user():
@@ -75,6 +74,10 @@ def load_logged_in_user():
     g.user = None
     if user_id is not None:
         g.user = User.query.get(user_id)
+    # Redireciona para login se não estiver logado e não for rota pública
+    if not g.user and request.endpoint not in ('login', 'static', 'home'):
+        if not (request.endpoint or '').startswith('static'):
+            return redirect(url_for('login'))
 
 def has_permission(user, perm_field):
     if not user:
@@ -87,7 +90,11 @@ def has_permission(user, perm_field):
 app.jinja_env.globals.update(has_permission=has_permission)
 
 @app.route('/register_user', methods=['GET', 'POST'])
+@login_required
 def register_user():
+    if not has_permission(g.user, 'can_access_register_user'):
+        flash('Sem acesso. Entre em contato: analiseoperacional.extrema@luftsolutions.com.br')
+        return redirect(url_for('index'))
     if request.method == 'POST':
         nome_completo = request.form['nome_completo']
         username = request.form['username']
@@ -122,8 +129,9 @@ def logout():
     return redirect(url_for('login'))
 
 @app.route('/permissions', methods=['GET', 'POST'])
+@login_required
 def permissions():
-    if g.user is None or not (g.user.username == MASTER_USER or has_permission(g.user, 'can_access_permissions')):
+    if not (g.user.username == MASTER_USER or has_permission(g.user, 'can_access_permissions')):
         flash('Sem acesso. Entre em contato: analiseoperacional.extrema@luftsolutions.com.br')
         return redirect(url_for('index'))
     roles = ['master', 'admin', 'rh', 'coordenador', 'lider']
@@ -152,8 +160,9 @@ def permissions():
     )
 
 @app.route('/edit_user/<int:user_id>', methods=['GET', 'POST'])
+@login_required
 def edit_user(user_id):
-    if g.user is None or not has_permission(g.user, 'can_access_register_user'):
+    if not has_permission(g.user, 'can_access_register_user'):
         flash('Sem acesso.')
         return redirect(url_for('index'))
     user = User.query.get_or_404(user_id)
@@ -181,8 +190,9 @@ def edit_user(user_id):
     )
 
 @app.route('/delete_user/<int:user_id>')
+@login_required
 def delete_user(user_id):
-    if g.user is None or not has_permission(g.user, 'can_access_register_user'):
+    if not has_permission(g.user, 'can_access_register_user'):
         flash('Sem acesso. Entre em contato: analiseoperacional.extrema@luftsolutions.com.br')
         return redirect(url_for('index'))
     user = User.query.get_or_404(user_id)
@@ -195,9 +205,8 @@ def delete_user(user_id):
     return redirect(url_for('register_user'))
 
 @app.route('/colaboradores', methods=['GET'])
+@login_required
 def colaboradores():
-    if g.user is None:
-        return redirect(url_for('login'))
     if not has_permission(g.user, 'can_access_colaboradores'):
         flash('Sem acesso. Entre em contato: analiseoperacional.extrema@luftsolutions.com.br')
         return redirect(url_for('index'))
@@ -245,8 +254,9 @@ def colaboradores():
     )
 
 @app.route('/export_colaboradores')
+@login_required
 def export_colaboradores():
-    if g.user is None or not has_permission(g.user, 'can_access_colaboradores'):
+    if not has_permission(g.user, 'can_access_colaboradores'):
         flash('Sem acesso.')
         return redirect(url_for('index'))
     filtro_nome = request.args.get('filtro_nome', '')
@@ -292,8 +302,9 @@ def export_colaboradores():
 
 # Exemplo de rota para importar colaboradores via Excel
 @app.route('/upload_colaboradores', methods=['POST'])
+@login_required
 def upload_colaboradores():
-    if g.user is None or not has_permission(g.user, 'can_access_colaboradores'):
+    if not has_permission(g.user, 'can_access_colaboradores'):
         flash('Sem acesso.')
         return redirect(url_for('index'))
     file = request.files.get('file')
@@ -361,8 +372,9 @@ def upload_colaboradores():
     return redirect(url_for('colaboradores'))
 
 @app.route('/add_colaborador', methods=['POST'])
+@login_required
 def add_colaborador():
-    if g.user is None or not has_permission(g.user, 'can_access_colaboradores'):
+    if not has_permission(g.user, 'can_access_colaboradores'):
         flash('Sem acesso.')
         return redirect(url_for('index'))
     nome = request.form.get('nome')
@@ -403,8 +415,9 @@ def add_colaborador():
     return redirect(url_for('colaboradores'))
 
 @app.route('/edit_colaborador/<int:colaborador_id>', methods=['GET', 'POST'])
+@login_required
 def edit_colaborador(colaborador_id):
-    if g.user is None or not has_permission(g.user, 'can_access_colaboradores'):
+    if not has_permission(g.user, 'can_access_colaboradores'):
         flash('Sem acesso.')
         return redirect(url_for('index'))
     colaborador = Colaborador.query.get_or_404(colaborador_id)
@@ -433,8 +446,9 @@ def edit_colaborador(colaborador_id):
     )
 
 @app.route('/delete_colaborador/<int:colaborador_id>')
+@login_required
 def delete_colaborador(colaborador_id):
-    if g.user is None or not has_permission(g.user, 'can_access_colaboradores'):
+    if not has_permission(g.user, 'can_access_colaboradores'):
         flash('Sem acesso.')
         return redirect(url_for('index'))
     colaborador = Colaborador.query.get_or_404(colaborador_id)
@@ -444,9 +458,8 @@ def delete_colaborador(colaborador_id):
     return redirect(url_for('colaboradores'))
 
 @app.route('/lista_presenca', methods=['GET', 'POST'])
+@login_required
 def lista_presenca():
-    if g.user is None:
-        return redirect(url_for('login'))
     if not has_permission(g.user, 'can_access_lista_presenca'):
         flash('Sem acesso.')
         return redirect(url_for('index'))
@@ -545,6 +558,7 @@ def lista_presenca():
     )
 
 @app.route('/minhas_presencas', methods=['GET', 'POST'])
+@login_required
 def minhas_presencas():
     if g.user is None:
         return redirect(url_for('login'))
@@ -623,6 +637,7 @@ def minhas_presencas():
     )
 
 @app.route('/delete_presenca/<int:presenca_id>', methods=['POST'])
+@login_required
 def delete_presenca(presenca_id):
     presenca = Presenca.query.get_or_404(presenca_id)
     # if presenca.usuario_id != g.user.id and g.user.role not in ['admin', 'master']:
@@ -634,6 +649,7 @@ def delete_presenca(presenca_id):
     return redirect(url_for('minhas_presencas'))
 
 @app.route('/export_minhas_presencas')
+@login_required
 def export_minhas_presencas():
     if g.user is None:
         flash('Sem acesso.')
@@ -692,6 +708,7 @@ def export_minhas_presencas():
     return send_file(output, download_name="minhas_presencas.xlsx", as_attachment=True)
 
 @app.route('/empresas', methods=['GET', 'POST'])
+@login_required
 def empresas():
     if request.method == 'POST':
         nome = request.form.get('nome')
@@ -704,6 +721,7 @@ def empresas():
     return render_template('empresas.html', empresas=empresas, user=g.user)
 
 @app.route('/delete_empresa/<int:id>')
+@login_required
 def delete_empresa(id):
     empresa = Empresa.query.get_or_404(id)
     db.session.delete(empresa)
@@ -712,7 +730,10 @@ def delete_empresa(id):
     return redirect(url_for('empresas'))
 
 @app.route('/setores', methods=['GET', 'POST'])
+@login_required
 def setores():
+    if g.user is None:
+        return redirect(url_for('login'))
     if request.method == 'POST':
         nome = request.form.get('nome')
         if nome and not Setor.query.filter_by(nome=nome).first():
@@ -724,6 +745,7 @@ def setores():
     return render_template('setores.html', setores=setores, user=g.user)
 
 @app.route('/delete_setor/<int:id>')
+@login_required
 def delete_setor(id):
     setor = Setor.query.get_or_404(id)
     db.session.delete(setor)
@@ -732,6 +754,7 @@ def delete_setor(id):
     return redirect(url_for('setores'))
 
 @app.route('/alterar_senha', methods=['GET', 'POST'])
+@login_required
 def alterar_senha():
     if g.user is None:
         return redirect(url_for('login'))
@@ -749,6 +772,15 @@ def alterar_senha():
             flash('Senha alterada com sucesso!')
             return redirect(url_for('index'))
     return render_template('alterar_senha.html', user=g.user)
+
+def login_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if g.user is None:
+            flash('Faça login para acessar esta página.')
+            return redirect(url_for('login'))
+        return f(*args, **kwargs)
+    return decorated_function
 
 if __name__ == '__main__':
     with app.app_context():
