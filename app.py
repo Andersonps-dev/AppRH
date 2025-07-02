@@ -51,6 +51,8 @@ def login():
 
         if user and check_password_hash(user.password, password):
             session['user_id'] = user.id
+            if getattr(user, 'precisa_trocar_senha', False):
+                return redirect(url_for('alterar_senha'))
             return redirect(url_for('index'))
         else:
             error = 'Usuário ou senha inválidos.'
@@ -89,11 +91,9 @@ def register_user():
     if request.method == 'POST':
         nome_completo = request.form['nome_completo']
         username = request.form['username']
-        password = request.form['password']
         role = request.form['role']
         setor_id = request.form['setor_id']
-
-        empresa_ids = request.form.getlist('empresas')  # <-- pega lista de empresas
+        empresa_ids = request.form.getlist('empresas')
 
         if User.query.filter_by(username=username).first():
             flash('Usuário já existe!')
@@ -101,15 +101,15 @@ def register_user():
             user = User(
                 nome_completo=nome_completo,
                 username=username,
-                password=generate_password_hash(password),
+                password=generate_password_hash('luft2025'),
                 role=role,
-                setor_id=setor_id
+                setor_id=setor_id,
+                precisa_trocar_senha=True
             )
-            # associa empresas selecionadas
             user.empresas = Empresa.query.filter(Empresa.id.in_(empresa_ids)).all()
             db.session.add(user)
             db.session.commit()
-            flash('Usuário cadastrado com sucesso!')
+            flash('Usuário cadastrado com sucesso! A senha inicial é "luft2025".')
         return redirect(url_for('register_user'))
     users = User.query.all()
     empresas = Empresa.query.order_by(Empresa.nome).all()
@@ -744,8 +744,10 @@ def alterar_senha():
             flash('A nova senha deve ter pelo menos 4 caracteres!')
         else:
             g.user.password = generate_password_hash(nova_senha)
+            g.user.precisa_trocar_senha = False
             db.session.commit()
             flash('Senha alterada com sucesso!')
+            return redirect(url_for('index'))
     return render_template('alterar_senha.html', user=g.user)
 
 if __name__ == '__main__':

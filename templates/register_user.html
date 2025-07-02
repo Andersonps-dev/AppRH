@@ -32,18 +32,6 @@
                     <input type="text" class="form-control" id="username" name="username" required>
                 </div>
                 <div class="col-md-6">
-                    <label for="password" class="form-label">Senha</label>
-                    <div class="input-group">
-                        <input type="password" class="form-control" id="password" name="password" required autocomplete="new-password" style="background-color: #fff;">
-                        <button class="btn btn-outline-secondary" type="button" tabindex="-1"
-                            onclick="togglePassword('password', this)">
-                            <span class="input-group-text bg-transparent border-0 p-0" style="margin-left:-8px;">
-                                <i class="bi bi-eye" id="icon-password" style="color: #000; font-size: 1.2rem;"></i>
-                            </span>
-                        </button>
-                    </div>
-                </div>
-                <div class="col-md-6">
                     <label for="role" class="form-label">Cargo</label>
                     <select class="form-select" id="role" name="role" required>
                         <option value="">Selecione o cargo</option>
@@ -51,6 +39,15 @@
                         <option value="rh">RH</option>
                         <option value="coordenador">Coordenador</option>
                         <option value="lider">Líder</option>
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label for="setor" class="form-label">Setor</label>
+                    <select class="form-select" id="setor" name="setor_id" required>
+                        <option value="">Selecione</option>
+                        {% for setor in setores %}
+                            <option value="{{ setor.id }}">{{ setor.nome }}</option>
+                        {% endfor %}
                     </select>
                 </div>
                 <div class="col-md-6">
@@ -64,15 +61,6 @@
                         {% endfor %}
                     </select>
                     <small class="form-text text-muted">Segure Ctrl para selecionar várias.</small>
-                </div>
-                <div class="col-md-6">
-                    <label for="setor" class="form-label">Setor</label>
-                    <select class="form-select" id="setor" name="setor_id" required>
-                        <option value="">Selecione</option>
-                        {% for setor in setores %}
-                            <option value="{{ setor.id }}">{{ setor.nome }}</option>
-                        {% endfor %}
-                    </select>
                 </div>
             </div>
             <div class="mt-4">

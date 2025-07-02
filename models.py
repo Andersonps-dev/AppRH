@@ -17,6 +17,7 @@ class User(db.Model):
     empresas = db.relationship('Empresa', secondary=user_empresas, backref='usuarios')
     empresa = db.relationship('Empresa')
     setor = db.relationship('Setor')
+    precisa_trocar_senha = db.Column(db.Boolean, default=True)
 
 class Permission(db.Model):
     id = db.Column(db.Integer, primary_key=True)
