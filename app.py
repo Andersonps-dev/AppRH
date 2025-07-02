@@ -6,17 +6,24 @@ from flask_migrate import Migrate
 import os
 from dotenv import load_dotenv
 import pandas as pd
-from datetime import datetime, date
-import io
+from datetime import datetime, date, timedelta
 from functools import wraps
+import logging
 
 from config import *
 
+# Configuração de logs (opcional, descomente para depuração)
+# logging.basicConfig(level=logging.DEBUG)
+
 app = Flask(__name__)
 
+# Configurações do Flask
 app.config['SECRET_KEY'] = 'admin_anderson_luft'
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///database.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(minutes=30)  # Sessão expira após 30 minutos
+app.config['SESSION_COOKIE_HTTPONLY'] = True  # Protege cookies contra acesso por JavaScript
+app.config['SESSION_COOKIE_SECURE'] = True  # Requer HTTPS (desative em desenvolvimento local se não usar HTTPS)
 
 db.init_app(app)
 migrate = Migrate(app, db)
@@ -37,6 +44,50 @@ PERMISSIONS = [
     ('can_access_permissions', 'Acessa Permissões'),
 ]
 
+# Adiciona cabeçalhos anti-cache
+@app.after_request
+def add_no_cache_headers(response):
+    response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, private'
+    response.headers['Pragma'] = 'no-cache'
+    response.headers['Expires'] = '0'
+    return response
+
+@app.before_request
+def load_logged_in_user():
+    user_id = session.get('user_id')
+    # logging.debug(f"User ID na sessão: {user_id}")
+    g.user = None
+    if user_id is not None:
+        g.user = User.query.get(user_id)
+        # logging.debug(f"Usuário carregado: {g.user}")
+    
+    # Redireciona para login se não estiver logado e a rota não for pública
+    public_routes = ['login', 'static', 'home']
+    # logging.debug(f"Rota atual: {request.endpoint}")
+    if not g.user and request.endpoint not in public_routes:
+        # logging.debug("Redirecionando para login")
+        flash('Faça login para acessar esta página.')
+        return redirect(url_for('login', next=request.url))
+
+def login_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if g.user is None:
+            flash('Faça login para acessar esta página.')
+            return redirect(url_for('login', next=request.url))
+        return f(*args, **kwargs)
+    return decorated_function
+
+def has_permission(user, perm_field):
+    if not user:
+        return False
+    if user.username == MASTER_USER:
+        return True
+    perm = Permission.query.filter_by(role=user.role).first()
+    return getattr(perm, perm_field, False) if perm else False
+
+app.jinja_env.globals.update(has_permission=has_permission)
+
 @app.route('/')
 def home():
     return redirect(url_for('login'))
@@ -54,7 +105,8 @@ def login():
             session['user_id'] = user.id
             if getattr(user, 'precisa_trocar_senha', False):
                 return redirect(url_for('alterar_senha'))
-            return redirect(url_for('index'))
+            next_url = request.args.get('next') or url_for('index')
+            return redirect(next_url)
         else:
             error = 'Usuário ou senha inválidos.'
 
@@ -67,27 +119,6 @@ def index():
         flash('Sem acesso. Entre em contato: analiseoperacional.extrema@luftsolutions.com.br')
         return redirect(url_for('login'))
     return render_template('index.html', user=g.user)
-
-@app.before_request
-def load_logged_in_user():
-    user_id = session.get('user_id')
-    g.user = None
-    if user_id is not None:
-        g.user = User.query.get(user_id)
-    # Redireciona para login se não estiver logado e não for rota pública
-    if not g.user and request.endpoint not in ('login', 'static', 'home'):
-        if not (request.endpoint or '').startswith('static'):
-            return redirect(url_for('login'))
-
-def has_permission(user, perm_field):
-    if not user:
-        return False
-    if user.username == MASTER_USER:
-        return True
-    perm = Permission.query.filter_by(role=user.role).first()
-    return getattr(perm, perm_field, False) if perm else False
-
-app.jinja_env.globals.update(has_permission=has_permission)
 
 @app.route('/register_user', methods=['GET', 'POST'])
 @login_required
@@ -126,6 +157,7 @@ def register_user():
 @app.route('/logout')
 def logout():
     session.clear()
+    flash('Você foi desconectado.')
     return redirect(url_for('login'))
 
 @app.route('/permissions', methods=['GET', 'POST'])
@@ -136,16 +168,15 @@ def permissions():
         return redirect(url_for('index'))
     roles = ['master', 'admin', 'rh', 'coordenador', 'lider']
     if request.method == 'POST':
-        for role in roles:
-            if role == 'master':
+        for raw_role in roles:
+            if raw_role == 'master':
                 continue
-            perm = Permission.query.filter_by(role=role).first()
+            perm = Permission.query.filter_by(role=raw_role).first()
             if not perm:
-                perm = Permission(role=role)
+                perm = Permission(role=raw_role)
                 db.session.add(perm)
             for field, _ in PERMISSIONS:
-                setattr(perm, field, bool(request.form.get(f'{role}_{field}')))
-                
+                setattr(perm, field, bool(request.form.get(f'{raw_role}_{field}')))
         db.session.commit()
         flash('Permissões atualizadas!')
         return redirect(url_for('permissions'))
@@ -177,7 +208,7 @@ def edit_user(user_id):
         if user.username != 'luftsolutions.extrema':
             user.role = request.form.get('role')
         user.setor_id = request.form.get('setor_id')
-        empresa_ids = request.form.getlist('empresas')  # <-- pega lista de empresas
+        empresa_ids = request.form.getlist('empresas')
         user.empresas = Empresa.query.filter(Empresa.id.in_(empresa_ids)).all()
         db.session.commit()
         flash('Usuário atualizado com sucesso!')
@@ -214,7 +245,6 @@ def colaboradores():
     turnos = ['1º TURNO', '2º TURNO', 'COMERCIAL', '3º TURNO']
     status_list = ['ATIVO', 'INATIVO']
 
-    # Filtros
     filtro_nome = request.args.get('filtro_nome', '')
     filtro_empresa = request.args.get('filtro_empresa', '')
     filtro_status = request.args.get('filtro_status', '')
@@ -233,10 +263,6 @@ def colaboradores():
     if filtro_gestor:
         query = query.filter(Colaborador.gestor.ilike(f'%{filtro_gestor}%'))
     colaboradores = query.all()
-
-    # Busca empresas e setores únicos cadastrados
-    companies = db.session.query(Colaborador.empresa).distinct().filter(Colaborador.empresa != None).all()
-    setores = [row[0] for row in db.session.query(Colaborador.setor).distinct().filter(Colaborador.setor != None).all()]
 
     empresas = Empresa.query.order_by(Empresa.nome).all()
     setores = Setor.query.order_by(Setor.nome).all()
@@ -273,7 +299,6 @@ def export_colaboradores():
     if filtro_status:
         query = query.filter(Colaborador.situacao.ilike(f'%{filtro_status}%'))
     if filtro_setor:
-        # Se filtro_setor for o id do setor:
         query = query.filter(Colaborador.setor_id == int(filtro_setor))
     if filtro_gestor:
         query = query.filter(Colaborador.gestor.ilike(f'%{filtro_gestor}%'))
@@ -286,11 +311,11 @@ def export_colaboradores():
             'Cpf': c.cpf,
             'Função': c.funcao,
             'Admissão': c.admissao,
-            'Setor': c.setor,
+            'Setor': c.setor.nome if c.setor else '',
             'Turno': c.turno,
             'Empregador': c.empregador,
             'Situação': c.situacao,
-            'Empresa': c.empresa,
+            'Empresa': c.empresa.nome if c.empresa else '',
             'Gestor': c.gestor
         })
     df = pd.DataFrame(data)
@@ -300,7 +325,6 @@ def export_colaboradores():
     output.seek(0)
     return send_file(output, download_name="colaboradores.xlsx", as_attachment=True)
 
-# Exemplo de rota para importar colaboradores via Excel
 @app.route('/upload_colaboradores', methods=['POST'])
 @login_required
 def upload_colaboradores():
@@ -336,7 +360,6 @@ def upload_colaboradores():
         except Exception:
             continue
 
-        # Busca empresa e setor pelo nome
         empresa_nome = row.get('Empresa')
         setor_nome = row.get('Setor')
         empresa = Empresa.query.filter_by(nome=empresa_nome).first() if empresa_nome else None
@@ -392,7 +415,6 @@ def add_colaborador():
         flash('Preencha todos os campos obrigatórios!')
         return redirect(url_for('colaboradores'))
 
-    # Verifica duplicidade de CPF
     if Colaborador.query.filter_by(cpf=cpf).first():
         flash('Já existe um colaborador cadastrado com este CPF!')
         return redirect(url_for('colaboradores'))
@@ -402,11 +424,11 @@ def add_colaborador():
         cpf=cpf,
         funcao=funcao,
         admissao=admissao,
-        setor_id=setor_id,           # Corrigido
+        setor_id=setor_id,
         turno=turno,
         empregador=empregador,
         situacao=situacao,
-        empresa_id=empresa_id,       # Corrigido
+        empresa_id=empresa_id,
         gestor=gestor
     )
     db.session.add(colaborador)
@@ -426,11 +448,11 @@ def edit_colaborador(colaborador_id):
         colaborador.cpf = request.form.get('cpf')
         colaborador.funcao = request.form.get('funcao')
         colaborador.admissao = request.form.get('admissao')
-        colaborador.setor_id = request.form.get('setor_id')      # Corrigido
+        colaborador.setor_id = request.form.get('setor_id')
         colaborador.turno = request.form.get('turno')
         colaborador.empregador = request.form.get('empregador')
         colaborador.situacao = request.form.get('situacao')
-        colaborador.empresa_id = request.form.get('empresa_id')  # Corrigido
+        colaborador.empresa_id = request.form.get('empresa_id')
         colaborador.gestor = request.form.get('gestor')
         db.session.commit()
         flash('Colaborador atualizado com sucesso!')
@@ -466,7 +488,6 @@ def lista_presenca():
 
     user = g.user
 
-    # Filtros
     if request.method == 'POST':
         data_str = request.form.get('data')
         filtro_empresa = request.form.get('filtro_empresa', '')
@@ -488,7 +509,6 @@ def lista_presenca():
     else:
         data_selecionada = date.today()
 
-    # Busca colaboradores com filtros
     query = Colaborador.query
     if user.role in ['admin', 'master', 'rh']:
         pass
@@ -509,7 +529,6 @@ def lista_presenca():
 
     colaboradores = query.order_by(Colaborador.nome).all()
 
-    # Salvar presença
     if request.method == 'POST':
         for colaborador in colaboradores:
             status = request.form.get(f'status_{colaborador.id}', 'ausente')
@@ -531,7 +550,8 @@ def lista_presenca():
         db.session.commit()
         flash('Lista de presença salva com sucesso!')
         return redirect(url_for('lista_presenca', data=data_selecionada.strftime('%Y-%m-%d'),
-                                filtro_empresa=filtro_empresa, filtro_setor=filtro_setor, filtro_turno=filtro_turno, filtro_gestor=filtro_gestor))
+                                filtro_empresa=filtro_empresa, filtro_setor=filtro_setor,
+                                filtro_turno=filtro_turno, filtro_gestor=filtro_gestor))
 
     presencas = {p.colaborador_id: p for p in Presenca.query.filter(
         Presenca.data == data_selecionada,
@@ -561,11 +581,11 @@ def lista_presenca():
 @login_required
 def minhas_presencas():
     if g.user is None:
+        flash('Faça login para acessar esta página.')
         return redirect(url_for('login'))
 
     user = g.user
 
-    # Filtros
     filtro_nome = request.args.get('filtro_nome', '')
     filtro_empresa = request.args.get('filtro_empresa', '')
     filtro_setor = request.args.get('filtro_setor', '')
@@ -605,7 +625,6 @@ def minhas_presencas():
 
     presencas = query.order_by(Presenca.data.desc()).all()
 
-    # Atualização dos status
     if request.method == 'POST':
         for p in presencas:
             novo_status = request.form.get(f'status_{p.id}')
@@ -613,14 +632,13 @@ def minhas_presencas():
                 p.status = novo_status
         db.session.commit()
         flash('Presenças atualizadas com sucesso!')
-        return redirect(url_for('minhas_presencas', 
-            filtro_nome=filtro_nome, 
-            filtro_empresa=filtro_empresa,
-            filtro_setor=filtro_setor,
-            filtro_turno=filtro_turno,
-            filtro_data=filtro_data,
-            filtro_gestor=filtro_gestor
-        ))
+        return redirect(url_for('minhas_presencas',
+                                filtro_nome=filtro_nome,
+                                filtro_empresa=filtro_empresa,
+                                filtro_setor=filtro_setor,
+                                filtro_turno=filtro_turno,
+                                filtro_data=filtro_data,
+                                filtro_gestor=filtro_gestor))
 
     return render_template(
         'minhas_presencas.html',
@@ -640,9 +658,6 @@ def minhas_presencas():
 @login_required
 def delete_presenca(presenca_id):
     presenca = Presenca.query.get_or_404(presenca_id)
-    # if presenca.usuario_id != g.user.id and g.user.role not in ['admin', 'master']:
-    #     flash('Sem permissão para excluir esta presença.')
-    #     return redirect(url_for('minhas_presencas'))
     db.session.delete(presenca)
     db.session.commit()
     flash('Presença excluída com sucesso!')
@@ -652,7 +667,7 @@ def delete_presenca(presenca_id):
 @login_required
 def export_minhas_presencas():
     if g.user is None:
-        flash('Sem acesso.')
+        flash('Faça login para acessar esta página.')
         return redirect(url_for('login'))
 
     filtro_nome = request.args.get('filtro_nome', '')
@@ -696,7 +711,7 @@ def export_minhas_presencas():
             'CPF': p.colaborador.cpf,
             'Setor': p.colaborador.setor.nome if p.colaborador.setor else '',
             'Turno': p.colaborador.turno,
-            'Empresa': p.colaborador.empresa.name if p.colaborador.empresa else '',
+            'Empresa': p.colaborador.empresa.nome if p.colaborador.empresa else '',
             'Gestor': p.colaborador.gestor,
             'Status': p.status
         })
@@ -710,12 +725,17 @@ def export_minhas_presencas():
 @app.route('/empresas', methods=['GET', 'POST'])
 @login_required
 def empresas():
+    if g.user is None:
+        flash('Faça login para acessar esta página.')
+        return redirect(url_for('login'))
     if request.method == 'POST':
         nome = request.form.get('nome')
         if nome and not Empresa.query.filter_by(nome=nome).first():
             db.session.add(Empresa(nome=nome))
             db.session.commit()
             flash('Empresa cadastrada!')
+        else:
+            flash('Empresa já existe ou nome inválido!')
         return redirect(url_for('empresas'))
     empresas = Empresa.query.order_by(Empresa.nome).all()
     return render_template('empresas.html', empresas=empresas, user=g.user)
@@ -733,6 +753,7 @@ def delete_empresa(id):
 @login_required
 def setores():
     if g.user is None:
+        flash('Faça login para acessar esta página.')
         return redirect(url_for('login'))
     if request.method == 'POST':
         nome = request.form.get('nome')
@@ -740,6 +761,8 @@ def setores():
             db.session.add(Setor(nome=nome))
             db.session.commit()
             flash('Setor cadastrado!')
+        else:
+            flash('Setor já existe ou nome inválido!')
         return redirect(url_for('setores'))
     setores = Setor.query.order_by(Setor.nome).all()
     return render_template('setores.html', setores=setores, user=g.user)
@@ -757,6 +780,7 @@ def delete_setor(id):
 @login_required
 def alterar_senha():
     if g.user is None:
+        flash('Faça login para acessar esta página.')
         return redirect(url_for('login'))
     if request.method == 'POST':
         nova_senha = request.form.get('nova_senha')
@@ -773,31 +797,19 @@ def alterar_senha():
             return redirect(url_for('index'))
     return render_template('alterar_senha.html', user=g.user)
 
-def login_required(f):
-    @wraps(f)
-    def decorated_function(*args, **kwargs):
-        if g.user is None:
-            flash('Faça login para acessar esta página.')
-            return redirect(url_for('login'))
-        return f(*args, **kwargs)
-    return decorated_function
-
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()
-        # Cria empresa LUFT se não existir
         empresa_luft = Empresa.query.filter_by(nome="LUFT").first()
         if not empresa_luft:
             empresa_luft = Empresa(nome="LUFT")
             db.session.add(empresa_luft)
             db.session.commit()
-        # Cria setor "TODOS" se não existir
         setor_todos = Setor.query.filter_by(nome="TODOS").first()
         if not setor_todos:
             setor_todos = Setor(nome="TODOS")
             db.session.add(setor_todos)
             db.session.commit()
-        # Cria ou atualiza usuário master
         master = User.query.filter_by(username=MASTER_USER).first()
         if not master:
             master = User(
