@@ -212,7 +212,7 @@
         const table = document.getElementById('tabelaColaboradores');
         const tbody = table.querySelector('tbody');
         const rows = Array.from(tbody.querySelectorAll('tr'));
-        const rowsPerPage = 5;
+        const rowsPerPage = 10;
         const pagination = document.getElementById('paginationColaboradores');
         let currentPage = 1;
         const totalPages = Math.ceil(rows.length / rowsPerPage);
