@@ -93,9 +93,15 @@
         {% endif %}
     {% endwith %}
     <form method="POST">
-        <!-- Campos ocultos para manter o filtro ao salvar -->
+        <!-- Campos ocultos para manter todos os filtros ao salvar -->
         <input type="hidden" name="data" value="{{ data_selecionada.strftime('%Y-%m-%d') }}">
+        <input type="hidden" name="filtro_empresa" value="{{ filtro_empresa }}">
         <input type="hidden" name="filtro_setor" value="{{ filtro_setor }}">
+        <input type="hidden" name="filtro_turno" value="{{ filtro_turno }}">
+        <input type="hidden" name="filtro_gestor" value="{{ filtro_gestor }}">
+        {% for c in colaboradores %}
+            <input type="hidden" name="colaborador_ids" value="{{ c.id }}">
+        {% endfor %}
         <div class="table-responsive">
             <table class="table table-bordered table-hover table-sm align-middle">
                 <thead class="table-primary">

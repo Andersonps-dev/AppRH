@@ -76,6 +76,13 @@
         {% endwith %}
     </form>
     <form method="POST">
+        <!-- Campos ocultos para manter filtros ao salvar -->
+        <input type="hidden" name="filtro_nome" value="{{ filtro_nome }}">
+        <input type="hidden" name="filtro_empresa" value="{{ filtro_empresa }}">
+        <input type="hidden" name="filtro_setor" value="{{ filtro_setor }}">
+        <input type="hidden" name="filtro_turno" value="{{ filtro_turno }}">
+        <input type="hidden" name="filtro_data" value="{{ filtro_data }}">
+        <input type="hidden" name="filtro_gestor" value="{{ filtro_gestor }}">
         <div class="table-responsive">
             <table class="table table-bordered table-hover table-sm align-middle" style="font-size:0.92rem;">
                 <thead class="table-primary">

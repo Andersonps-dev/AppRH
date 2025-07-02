@@ -9,6 +9,7 @@ import pandas as pd
 from datetime import datetime, date, timedelta
 from functools import wraps
 import logging
+import io
 
 from config import *
 
@@ -494,6 +495,34 @@ def lista_presenca():
         filtro_setor = request.form.get('filtro_setor', '')
         filtro_turno = request.form.get('filtro_turno', '')
         filtro_gestor = request.form.get('filtro_gestor', '')
+
+        colaborador_ids = request.form.getlist('colaborador_ids')
+        if colaborador_ids:
+            colaboradores = Colaborador.query.filter(Colaborador.id.in_(colaborador_ids)).order_by(Colaborador.nome).all()
+            for colaborador in colaboradores:
+                status = request.form.get(f'status_{colaborador.id}', 'ausente')
+                presenca = Presenca.query.filter_by(
+                    colaborador_id=colaborador.id,
+                    data=datetime.strptime(data_str, '%Y-%m-%d').date()
+                ).first()
+                if presenca:
+                    presenca.status = status
+                    presenca.usuario_id = user.id
+                else:
+                    presenca = Presenca(
+                        colaborador_id=colaborador.id,
+                        usuario_id=user.id,
+                        data=datetime.strptime(data_str, '%Y-%m-%d').date(),
+                        status=status
+                    )
+                    db.session.add(presenca)
+            db.session.commit()
+            flash('Lista de presença salva com sucesso!')
+        else:
+            flash('Nenhum colaborador filtrado para salvar!')
+        return redirect(url_for('lista_presenca', data=data_str,
+                                filtro_empresa=filtro_empresa, filtro_setor=filtro_setor,
+                                filtro_turno=filtro_turno, filtro_gestor=filtro_gestor))
     else:
         data_str = request.args.get('data')
         filtro_empresa = request.args.get('filtro_empresa', '')
@@ -529,30 +558,6 @@ def lista_presenca():
 
     colaboradores = query.order_by(Colaborador.nome).all()
 
-    if request.method == 'POST':
-        for colaborador in colaboradores:
-            status = request.form.get(f'status_{colaborador.id}', 'ausente')
-            presenca = Presenca.query.filter_by(
-                colaborador_id=colaborador.id,
-                data=data_selecionada
-            ).first()
-            if presenca:
-                presenca.status = status
-                presenca.usuario_id = user.id
-            else:
-                presenca = Presenca(
-                    colaborador_id=colaborador.id,
-                    usuario_id=user.id,
-                    data=data_selecionada,
-                    status=status
-                )
-                db.session.add(presenca)
-        db.session.commit()
-        flash('Lista de presença salva com sucesso!')
-        return redirect(url_for('lista_presenca', data=data_selecionada.strftime('%Y-%m-%d'),
-                                filtro_empresa=filtro_empresa, filtro_setor=filtro_setor,
-                                filtro_turno=filtro_turno, filtro_gestor=filtro_gestor))
-
     presencas = {p.colaborador_id: p for p in Presenca.query.filter(
         Presenca.data == data_selecionada,
         Presenca.colaborador_id.in_([c.id for c in colaboradores])
@@ -586,12 +591,20 @@ def minhas_presencas():
 
     user = g.user
 
-    filtro_nome = request.args.get('filtro_nome', '')
-    filtro_empresa = request.args.get('filtro_empresa', '')
-    filtro_setor = request.args.get('filtro_setor', '')
-    filtro_turno = request.args.get('filtro_turno', '')
-    filtro_data = request.args.get('filtro_data', '')
-    filtro_gestor = request.args.get('filtro_gestor', '')
+    if request.method == 'POST':
+        filtro_nome = request.form.get('filtro_nome', '')
+        filtro_empresa = request.form.get('filtro_empresa', '')
+        filtro_setor = request.form.get('filtro_setor', '')
+        filtro_turno = request.form.get('filtro_turno', '')
+        filtro_data = request.form.get('filtro_data', '')
+        filtro_gestor = request.form.get('filtro_gestor', '')
+    else:
+        filtro_nome = request.args.get('filtro_nome', '')
+        filtro_empresa = request.args.get('filtro_empresa', '')
+        filtro_setor = request.args.get('filtro_setor', '')
+        filtro_turno = request.args.get('filtro_turno', '')
+        filtro_data = request.args.get('filtro_data', '')
+        filtro_gestor = request.args.get('filtro_gestor', '')
 
     empresas = Empresa.query.order_by(Empresa.nome).all()
     setores = Setor.query.order_by(Setor.nome).all()
@@ -677,13 +690,19 @@ def export_minhas_presencas():
     filtro_data = request.args.get('filtro_data', '')
     filtro_gestor = request.args.get('filtro_gestor', '')
 
+    user = g.user
+
     query = Presenca.query.join(Colaborador)
-    if not g.user.all_companies and g.user.company_id:
-        query = query.filter(Colaborador.empresa_id == g.user.company_id)
-    if not g.user.all_setores and g.user.setor_id:
-        query = query.filter(Colaborador.setor_id == g.user.setor_id)
-    if not g.user.all_turnos and g.user.turno:
-        query = query.filter(Colaborador.turno == g.user.turno)
+
+    # Use a mesma lógica de permissão da tela de presenças
+    if user.role in ['admin', 'master', 'rh']:
+        pass
+    elif user.role == 'coordenador':
+        empresa_ids = [e.id for e in user.empresas]
+        query = query.filter(Colaborador.empresa_id.in_(empresa_ids))
+    else:
+        query = query.filter(Colaborador.gestor == user.nome_completo)
+
     if filtro_nome:
         query = query.filter(Colaborador.nome.ilike(f'%{filtro_nome}%'))
     if filtro_empresa:
@@ -715,8 +734,8 @@ def export_minhas_presencas():
             'Gestor': p.colaborador.gestor,
             'Status': p.status
         })
-    df = pd.DataFrame(data)
     output = io.BytesIO()
+    df = pd.DataFrame(data)
     with pd.ExcelWriter(output, engine='openpyxl') as writer:
         df.to_excel(writer, index=False)
     output.seek(0)
@@ -838,4 +857,4 @@ if __name__ == '__main__':
                 updated = True
             if updated:
                 db.session.commit()
-    app.run(debug=False)
+    app.run(debug=True)
