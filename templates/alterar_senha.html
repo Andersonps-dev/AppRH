@@ -1,0 +1,52 @@
+{% extends "navbar.html" %}
+{% block content %}
+<div class="card shadow p-4 mb-4">
+    <h2 class="mb-4">Alterar Senha</h2>
+    {% with messages = get_flashed_messages() %}
+        {% if messages %}
+            <div class="alert alert-info">
+                {% for message in messages %}
+                    <div>{{ message }}</div>
+                {% endfor %}
+            </div>
+        {% endif %}
+    {% endwith %}
+    <form method="POST">
+        <div class="mb-3">
+            <label for="nova_senha" class="form-label">Nova Senha</label>
+            <div class="input-group">
+                <input type="password" class="form-control" id="nova_senha" name="nova_senha" required>
+                <button class="btn btn-outline-secondary" type="button" onclick="togglePassword('nova_senha', this)">
+                    <i class="bi bi-eye"></i>
+                </button>
+            </div>
+        </div>
+        <div class="mb-3">
+            <label for="confirmar_senha" class="form-label">Confirmar Nova Senha</label>
+            <div class="input-group">
+                <input type="password" class="form-control" id="confirmar_senha" name="confirmar_senha" required>
+                <button class="btn btn-outline-secondary" type="button" onclick="togglePassword('confirmar_senha', this)">
+                    <i class="bi bi-eye"></i>
+                </button>
+            </div>
+        </div>
+        <button type="submit" class="btn btn-success">Alterar Senha</button>
+        <a href="{{ url_for('index') }}" class="btn btn-secondary">Cancelar</a>
+    </form>
+</div>
+<script>
+function togglePassword(fieldId, btn) {
+    const input = document.getElementById(fieldId);
+    const icon = btn.querySelector('i');
+    if (input.type === "password") {
+        input.type = "text";
+        icon.classList.remove('bi-eye');
+        icon.classList.add('bi-eye-slash');
+    } else {
+        input.type = "password";
+        icon.classList.remove('bi-eye-slash');
+        icon.classList.add('bi-eye');
+    }
+}
+</script>
+{% endblock %}

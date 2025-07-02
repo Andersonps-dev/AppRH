@@ -216,11 +216,11 @@ def colaboradores():
     if filtro_nome:
         query = query.filter(Colaborador.nome.ilike(f'%{filtro_nome}%'))
     if filtro_empresa:
-        query = query.filter(Colaborador.empresa == filtro_empresa)
+        query = query.filter(Colaborador.empresa_id == int(filtro_empresa))
     if filtro_status:
         query = query.filter(Colaborador.situacao.ilike(f'%{filtro_status}%'))
     if filtro_setor:
-        query = query.filter(Colaborador.setor == filtro_setor)
+        query = query.filter(Colaborador.setor_id == int(filtro_setor))
     if filtro_gestor:
         query = query.filter(Colaborador.gestor.ilike(f'%{filtro_gestor}%'))
     colaboradores = query.all()
@@ -453,11 +453,19 @@ def lista_presenca():
 
     user = g.user
 
-    # Defina data_selecionada logo no início
+    # Filtros
     if request.method == 'POST':
         data_str = request.form.get('data')
+        filtro_empresa = request.form.get('filtro_empresa', '')
+        filtro_setor = request.form.get('filtro_setor', '')
+        filtro_turno = request.form.get('filtro_turno', '')
+        filtro_gestor = request.form.get('filtro_gestor', '')
     else:
         data_str = request.args.get('data')
+        filtro_empresa = request.args.get('filtro_empresa', '')
+        filtro_setor = request.args.get('filtro_setor', '')
+        filtro_turno = request.args.get('filtro_turno', '')
+        filtro_gestor = request.args.get('filtro_gestor', '')
 
     if data_str:
         try:
@@ -467,25 +475,29 @@ def lista_presenca():
     else:
         data_selecionada = date.today()
 
+    # Busca colaboradores com filtros
+    query = Colaborador.query
     if user.role in ['admin', 'master', 'rh']:
-        colaboradores = Colaborador.query.order_by(Colaborador.nome).all()
+        pass
     elif user.role == 'coordenador':
         empresa_ids = [e.id for e in user.empresas]
-        colaboradores = Colaborador.query.filter(Colaborador.empresa_id.in_(empresa_ids)).order_by(Colaborador.nome).all()
+        query = query.filter(Colaborador.empresa_id.in_(empresa_ids))
     else:
-        colaboradores = Colaborador.query.filter(Colaborador.gestor == user.nome_completo).order_by(Colaborador.nome).all()
+        query = query.filter(Colaborador.gestor == user.nome_completo)
+
+    if filtro_empresa:
+        query = query.filter(Colaborador.empresa_id == int(filtro_empresa))
+    if filtro_setor:
+        query = query.filter(Colaborador.setor_id == int(filtro_setor))
+    if filtro_turno:
+        query = query.filter(Colaborador.turno == filtro_turno)
+    if filtro_gestor:
+        query = query.filter(Colaborador.gestor.ilike(f'%{filtro_gestor}%'))
+
+    colaboradores = query.order_by(Colaborador.nome).all()
 
     # Salvar presença
     if request.method == 'POST':
-        data_str = request.form.get('data')
-        if data_str:
-            try:
-                data_selecionada = datetime.strptime(data_str, '%Y-%m-%d').date()
-            except Exception:
-                data_selecionada = date.today()
-        else:
-            data_selecionada = date.today()
-
         for colaborador in colaboradores:
             status = request.form.get(f'status_{colaborador.id}', 'ausente')
             presenca = Presenca.query.filter_by(
@@ -505,20 +517,31 @@ def lista_presenca():
                 db.session.add(presenca)
         db.session.commit()
         flash('Lista de presença salva com sucesso!')
-        return redirect(url_for('lista_presenca', data=data_selecionada.strftime('%Y-%m-%d')))
+        return redirect(url_for('lista_presenca', data=data_selecionada.strftime('%Y-%m-%d'),
+                                filtro_empresa=filtro_empresa, filtro_setor=filtro_setor, filtro_turno=filtro_turno, filtro_gestor=filtro_gestor))
 
-    # Buscar presenças já salvas para a data
     presencas = {p.colaborador_id: p for p in Presenca.query.filter(
         Presenca.data == data_selecionada,
         Presenca.colaborador_id.in_([c.id for c in colaboradores])
     ).all()}
+
+    empresas = Empresa.query.order_by(Empresa.nome).all()
+    setores = Setor.query.order_by(Setor.nome).all()
+    turnos = ['1º TURNO', '2º TURNO', 'COMERCIAL', '3º TURNO']
 
     return render_template(
         'lista_presenca.html',
         user=user,
         colaboradores=colaboradores,
         presencas=presencas,
-        data_selecionada=data_selecionada
+        data_selecionada=data_selecionada,
+        empresas=empresas,
+        setores=setores,
+        turnos=turnos,
+        filtro_empresa=filtro_empresa,
+        filtro_setor=filtro_setor,
+        filtro_turno=filtro_turno,
+        filtro_gestor=filtro_gestor
     )
 
 @app.route('/minhas_presencas', methods=['GET', 'POST'])
@@ -528,7 +551,7 @@ def minhas_presencas():
 
     user = g.user
 
-    # Defina todos os filtros no início
+    # Filtros
     filtro_nome = request.args.get('filtro_nome', '')
     filtro_empresa = request.args.get('filtro_empresa', '')
     filtro_setor = request.args.get('filtro_setor', '')
@@ -536,17 +559,19 @@ def minhas_presencas():
     filtro_data = request.args.get('filtro_data', '')
     filtro_gestor = request.args.get('filtro_gestor', '')
 
+    empresas = Empresa.query.order_by(Empresa.nome).all()
+    setores = Setor.query.order_by(Setor.nome).all()
+
     query = Presenca.query.join(Colaborador)
 
     if user.role in ['admin', 'master', 'rh']:
-        pass  # vê tudo
+        pass
     elif user.role == 'coordenador':
         empresa_ids = [e.id for e in user.empresas]
         query = query.filter(Colaborador.empresa_id.in_(empresa_ids))
     else:
         query = query.filter(Colaborador.gestor == user.nome_completo)
 
-    # Filtros da tela
     if filtro_nome:
         query = query.filter(Colaborador.nome.ilike(f'%{filtro_nome}%'))
     if filtro_empresa:
@@ -592,15 +617,17 @@ def minhas_presencas():
         filtro_setor=filtro_setor,
         filtro_turno=filtro_turno,
         filtro_data=filtro_data,
-        filtro_gestor=filtro_gestor
+        filtro_gestor=filtro_gestor,
+        empresas=empresas,
+        setores=setores
     )
 
 @app.route('/delete_presenca/<int:presenca_id>', methods=['POST'])
 def delete_presenca(presenca_id):
     presenca = Presenca.query.get_or_404(presenca_id)
-    if presenca.usuario_id != g.user.id and g.user.role not in ['admin', 'master']:
-        flash('Sem permissão para excluir esta presença.')
-        return redirect(url_for('minhas_presencas'))
+    # if presenca.usuario_id != g.user.id and g.user.role not in ['admin', 'master']:
+    #     flash('Sem permissão para excluir esta presença.')
+    #     return redirect(url_for('minhas_presencas'))
     db.session.delete(presenca)
     db.session.commit()
     flash('Presença excluída com sucesso!')
@@ -703,6 +730,23 @@ def delete_setor(id):
     db.session.commit()
     flash('Setor excluído!')
     return redirect(url_for('setores'))
+
+@app.route('/alterar_senha', methods=['GET', 'POST'])
+def alterar_senha():
+    if g.user is None:
+        return redirect(url_for('login'))
+    if request.method == 'POST':
+        nova_senha = request.form.get('nova_senha')
+        confirmar_senha = request.form.get('confirmar_senha')
+        if nova_senha != confirmar_senha:
+            flash('A nova senha e a confirmação não conferem!')
+        elif len(nova_senha) < 4:
+            flash('A nova senha deve ter pelo menos 4 caracteres!')
+        else:
+            g.user.password = generate_password_hash(nova_senha)
+            db.session.commit()
+            flash('Senha alterada com sucesso!')
+    return render_template('alterar_senha.html', user=g.user)
 
 if __name__ == '__main__':
     with app.app_context():

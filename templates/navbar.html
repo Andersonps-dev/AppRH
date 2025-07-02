@@ -58,6 +58,11 @@
             <a class="nav-link" href="{{ url_for('permissions') }}">Permissões</a>
           </li>
           {% endif %}
+
+          <!-- Adicione onde desejar no menu -->
+          <li class="nav-item">
+              <a class="nav-link" href="{{ url_for('alterar_senha') }}">Alterar Senha</a>
+          </li>
         </ul>
         {% if user %}
         <div class="d-flex align-items-center">

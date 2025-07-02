@@ -14,10 +14,41 @@
 <div class="card shadow p-4 mb-4">
     <h2 class="mb-4">Lista de Presença</h2>
     <form method="get" class="row align-items-end g-2 mb-3">
-        <div class="col-12 col-md-4">
+        <div class="col-12 col-md-3">
             <label for="data" class="form-label">Data:</label>
             <input type="date" id="data" name="data" class="form-control"
                    value="{{ data_selecionada.strftime('%Y-%m-%d') }}">
+        </div>
+        <div class="col-12 col-md-3">
+            <label for="filtro_empresa" class="form-label">Empresa:</label>
+            <select id="filtro_empresa" name="filtro_empresa" class="form-select">
+                <option value="">Todas</option>
+                {% for empresa in empresas %}
+                    <option value="{{ empresa.id }}" {% if filtro_empresa|int == empresa.id %}selected{% endif %}>{{ empresa.nome }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-12 col-md-3">
+            <label for="filtro_setor" class="form-label">Setor:</label>
+            <select id="filtro_setor" name="filtro_setor" class="form-select">
+                <option value="">Todos</option>
+                {% for setor in setores %}
+                    <option value="{{ setor.id }}" {% if filtro_setor|int == setor.id %}selected{% endif %}>{{ setor.nome }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-12 col-md-2">
+            <label for="filtro_turno" class="form-label">Turno:</label>
+            <select id="filtro_turno" name="filtro_turno" class="form-select">
+                <option value="">Todos</option>
+                {% for turno in turnos %}
+                    <option value="{{ turno }}" {% if filtro_turno == turno %}selected{% endif %}>{{ turno }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-12 col-md-2">
+            <label for="filtro_gestor" class="form-label">Gestor:</label>
+            <input type="text" id="filtro_gestor" name="filtro_gestor" class="form-control" value="{{ filtro_gestor }}">
         </div>
         <div class="col-12 col-md-2 d-flex align-items-end">
             <button type="submit" class="btn btn-primary w-100">Filtrar</button>
@@ -41,6 +72,8 @@
                 <thead class="table-primary">
                     <tr>
                         <th>Colaborador</th>
+                        <th>Setor</th>
+                        <th>Turno</th>
                         <th>Status</th>
                     </tr>
                 </thead>
@@ -48,6 +81,8 @@
                     {% for c in colaboradores %}
                     <tr>
                         <td>{{ c.nome }}</td>
+                        <td>{{ c.setor.nome if c.setor else '' }}</td>
+                        <td>{{ c.turno }}</td>
                         <td>
                             {% set status_val = presencas.get(c.id).status if presencas.get(c.id) else 'ausente' %}
                             <select name="status_{{ c.id }}" class="form-select">
