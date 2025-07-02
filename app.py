@@ -794,4 +794,4 @@ if __name__ == '__main__':
                 updated = True
             if updated:
                 db.session.commit()
-    app.run(debug=True)
+    app.run(debug=False)
