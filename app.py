@@ -491,6 +491,7 @@ def lista_presenca():
 
     if request.method == 'POST':
         data_str = request.form.get('data')
+        filtro_nome = request.form.get('filtro_nome', '')
         filtro_empresa = request.form.get('filtro_empresa', '')
         filtro_setor = request.form.get('filtro_setor', '')
         filtro_turno = request.form.get('filtro_turno', '')
@@ -521,10 +522,12 @@ def lista_presenca():
         else:
             flash('Nenhum colaborador filtrado para salvar!')
         return redirect(url_for('lista_presenca', data=data_str,
+                                filtro_nome=filtro_nome,
                                 filtro_empresa=filtro_empresa, filtro_setor=filtro_setor,
                                 filtro_turno=filtro_turno, filtro_gestor=filtro_gestor))
     else:
         data_str = request.args.get('data')
+        filtro_nome = request.args.get('filtro_nome', '')
         filtro_empresa = request.args.get('filtro_empresa', '')
         filtro_setor = request.args.get('filtro_setor', '')
         filtro_turno = request.args.get('filtro_turno', '')
@@ -547,6 +550,8 @@ def lista_presenca():
     else:
         query = query.filter(Colaborador.gestor == user.nome_completo)
 
+    if filtro_nome:
+        query = query.filter(Colaborador.nome.ilike(f'%{filtro_nome}%'))
     if filtro_empresa:
         query = query.filter(Colaborador.empresa_id == int(filtro_empresa))
     if filtro_setor:
@@ -576,6 +581,7 @@ def lista_presenca():
         empresas=empresas,
         setores=setores,
         turnos=turnos,
+        filtro_nome=filtro_nome,
         filtro_empresa=filtro_empresa,
         filtro_setor=filtro_setor,
         filtro_turno=filtro_turno,

@@ -79,6 +79,10 @@
             <label for="filtro_gestor" class="form-label">Gestor:</label>
             <input type="text" id="filtro_gestor" name="filtro_gestor" class="form-control" value="{{ filtro_gestor }}">
         </div>
+        <div class="col-12 col-md-2">
+            <label for="filtro_nome" class="form-label">Colaborador:</label>
+            <input type="text" id="filtro_nome" name="filtro_nome" class="form-control" value="{{ filtro_nome }}">
+        </div>
         <div class="col-12 col-md-2 d-flex align-items-end">
             <button type="submit" class="btn btn-primary w-100">Filtrar</button>
         </div>
@@ -99,6 +103,7 @@
         <input type="hidden" name="filtro_setor" value="{{ filtro_setor }}">
         <input type="hidden" name="filtro_turno" value="{{ filtro_turno }}">
         <input type="hidden" name="filtro_gestor" value="{{ filtro_gestor }}">
+        <input type="hidden" name="filtro_nome" value="{{ filtro_nome }}">
         {% for c in colaboradores %}
             <input type="hidden" name="colaborador_ids" value="{{ c.id }}">
         {% endfor %}
