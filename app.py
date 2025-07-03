@@ -251,6 +251,7 @@ def colaboradores():
     filtro_status = request.args.get('filtro_status', '')
     filtro_setor = request.args.get('filtro_setor', '')
     filtro_gestor = request.args.get('filtro_gestor', '')
+    filtro_turno = request.args.getlist('filtro_turno')
 
     query = Colaborador.query
     if filtro_nome:
@@ -263,6 +264,8 @@ def colaboradores():
         query = query.filter(Colaborador.setor_id == int(filtro_setor))
     if filtro_gestor:
         query = query.filter(Colaborador.gestor.ilike(f'%{filtro_gestor}%'))
+    if filtro_turno:
+        query = query.filter(Colaborador.turno.in_(filtro_turno))
     colaboradores = query.all()
 
     empresas = Empresa.query.order_by(Empresa.nome).all()
@@ -277,7 +280,8 @@ def colaboradores():
         filtro_empresa=filtro_empresa,
         filtro_status=filtro_status,
         filtro_setor=filtro_setor,
-        filtro_gestor=filtro_gestor
+        filtro_gestor=filtro_gestor,
+        filtro_turno=filtro_turno
     )
 
 @app.route('/export_colaboradores')
@@ -291,6 +295,7 @@ def export_colaboradores():
     filtro_status = request.args.get('filtro_status', '')
     filtro_setor = request.args.get('filtro_setor', '')
     filtro_gestor = request.args.get('filtro_gestor', '')
+    filtro_turno = request.args.getlist('filtro_turno')  # <-- ADICIONE ESTA LINHA
 
     query = Colaborador.query
     if filtro_nome:
@@ -303,6 +308,9 @@ def export_colaboradores():
         query = query.filter(Colaborador.setor_id == int(filtro_setor))
     if filtro_gestor:
         query = query.filter(Colaborador.gestor.ilike(f'%{filtro_gestor}%'))
+    if filtro_turno:  # <-- ADICIONE ESTA LINHA
+        query = query.filter(Colaborador.turno.in_(filtro_turno))  # <-- ADICIONE ESTA LINHA
+
     colaboradores = query.all()
 
     data = []
@@ -530,7 +538,7 @@ def lista_presenca():
         filtro_nome = request.args.get('filtro_nome', '')
         filtro_empresa = request.args.get('filtro_empresa', '')
         filtro_setor = request.args.get('filtro_setor', '')
-        filtro_turno = request.args.get('filtro_turno', '')
+        filtro_turno = request.args.getlist('filtro_turno')
         filtro_gestor = request.args.get('filtro_gestor', '')
 
     if data_str:
@@ -557,7 +565,7 @@ def lista_presenca():
     if filtro_setor:
         query = query.filter(Colaborador.setor_id == int(filtro_setor))
     if filtro_turno:
-        query = query.filter(Colaborador.turno == filtro_turno)
+        query = query.filter(Colaborador.turno.in_(filtro_turno))
     if filtro_gestor:
         query = query.filter(Colaborador.gestor.ilike(f'%{filtro_gestor}%'))
 
@@ -598,17 +606,17 @@ def minhas_presencas():
     user = g.user
 
     if request.method == 'POST':
+        filtro_turno = request.form.getlist('filtro_turno')
         filtro_nome = request.form.get('filtro_nome', '')
         filtro_empresa = request.form.get('filtro_empresa', '')
         filtro_setor = request.form.get('filtro_setor', '')
-        filtro_turno = request.form.get('filtro_turno', '')
         filtro_data = request.form.get('filtro_data', '')
         filtro_gestor = request.form.get('filtro_gestor', '')
     else:
+        filtro_turno = request.args.getlist('filtro_turno')
         filtro_nome = request.args.get('filtro_nome', '')
         filtro_empresa = request.args.get('filtro_empresa', '')
         filtro_setor = request.args.get('filtro_setor', '')
-        filtro_turno = request.args.get('filtro_turno', '')
         filtro_data = request.args.get('filtro_data', '')
         filtro_gestor = request.args.get('filtro_gestor', '')
 
@@ -632,7 +640,7 @@ def minhas_presencas():
     if filtro_setor:
         query = query.filter(Colaborador.setor_id == int(filtro_setor))
     if filtro_turno:
-        query = query.filter(Colaborador.turno == filtro_turno)
+        query = query.filter(Colaborador.turno.in_(filtro_turno))
     if filtro_data:
         try:
             data_filtro = datetime.strptime(filtro_data, '%Y-%m-%d').date()
@@ -673,15 +681,6 @@ def minhas_presencas():
         setores=setores
     )
 
-@app.route('/delete_presenca/<int:presenca_id>', methods=['POST'])
-@login_required
-def delete_presenca(presenca_id):
-    presenca = Presenca.query.get_or_404(presenca_id)
-    db.session.delete(presenca)
-    db.session.commit()
-    flash('Presença excluída com sucesso!')
-    return redirect(url_for('minhas_presencas'))
-
 @app.route('/export_minhas_presencas')
 @login_required
 def export_minhas_presencas():
@@ -692,7 +691,7 @@ def export_minhas_presencas():
     filtro_nome = request.args.get('filtro_nome', '')
     filtro_empresa = request.args.get('filtro_empresa', '')
     filtro_setor = request.args.get('filtro_setor', '')
-    filtro_turno = request.args.get('filtro_turno', '')
+    filtro_turno = request.args.getlist('filtro_turno')
     filtro_data = request.args.get('filtro_data', '')
     filtro_gestor = request.args.get('filtro_gestor', '')
 
@@ -700,7 +699,6 @@ def export_minhas_presencas():
 
     query = Presenca.query.join(Colaborador)
 
-    # Use a mesma lógica de permissão da tela de presenças
     if user.role in ['admin', 'master', 'rh']:
         pass
     elif user.role == 'coordenador':
@@ -716,7 +714,7 @@ def export_minhas_presencas():
     if filtro_setor:
         query = query.filter(Colaborador.setor_id == int(filtro_setor))
     if filtro_turno:
-        query = query.filter(Colaborador.turno == filtro_turno)
+        query = query.filter(Colaborador.turno.in_(filtro_turno))
     if filtro_data:
         try:
             data_filtro = datetime.strptime(filtro_data, '%Y-%m-%d').date()
@@ -821,6 +819,15 @@ def alterar_senha():
             flash('Senha alterada com sucesso!')
             return redirect(url_for('index'))
     return render_template('alterar_senha.html', user=g.user)
+
+@app.route('/delete_presenca/<int:presenca_id>', methods=['POST'])
+@login_required
+def delete_presenca(presenca_id):
+    presenca = Presenca.query.get_or_404(presenca_id)
+    db.session.delete(presenca)
+    db.session.commit()
+    flash('Presença excluída com sucesso!')
+    return redirect(request.referrer or url_for('minhas_presencas'))
 
 if __name__ == '__main__':
     with app.app_context():

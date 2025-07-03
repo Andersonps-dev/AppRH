@@ -12,6 +12,7 @@
 <body class="bg-light">
     {% extends "navbar.html" %}
     {% block content %}
+    {% set filtro_turno = request.args.getlist('filtro_turno') %}
     <div class="card shadow p-4 mb-4">
         <div class="d-flex justify-content-between align-items-center mb-3">
             <h2>Colaboradores</h2>
@@ -24,7 +25,7 @@
                 filtro_status=filtro_status,
                 filtro_setor=filtro_setor,
                 filtro_gestor=filtro_gestor
-            ) }}" class="btn btn-success">Exportar Excel</a>
+            ) }}{% for t in filtro_turno %}&filtro_turno={{ t }}{% endfor %}" class="btn btn-success">Exportar Excel</a>
             </div>
         </div>
         <form class="row g-2 mb-3" method="get">
@@ -57,6 +58,18 @@
             </div>
             <div class="col-md-2">
                 <input type="text" name="filtro_gestor" class="form-control" placeholder="Filtrar por gestor" value="{{ filtro_gestor }}">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label d-block">Turno:</label>
+                {% set turnos_list = ['1º TURNO', '2º TURNO', '3º TURNO', 'COMERCIAL'] %}
+                {% for turno in turnos_list %}
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="checkbox" name="filtro_turno" value="{{ turno }}"
+                            id="turno_{{ loop.index }}" 
+                            {% if filtro_turno and turno in filtro_turno %}checked{% endif %}>
+                        <label class="form-check-label" for="turno_{{ loop.index }}">{{ turno }}</label>
+                    </div>
+                {% endfor %}
             </div>
             <div class="col-md-2 d-flex gap-2">
                 <button class="btn btn-primary" type="submit">Filtrar</button>

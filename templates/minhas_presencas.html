@@ -40,14 +40,16 @@
             </select>
         </div>
         <div class="col-md-2">
-            <label for="filtro_turno" class="form-label">Turno</label>
-            <select class="form-select" id="filtro_turno" name="filtro_turno">
-                <option value="">Todos</option>
-                <option value="1º TURNO" {% if filtro_turno == '1º TURNO' %}selected{% endif %}>1º TURNO</option>
-                <option value="2º TURNO" {% if filtro_turno == '2º TURNO' %}selected{% endif %}>2º TURNO</option>
-                <option value="3º TURNO" {% if filtro_turno == '3º TURNO' %}selected{% endif %}>3º TURNO</option>
-                <option value="COMERCIAL" {% if filtro_turno == 'COMERCIAL' %}selected{% endif %}>COMERCIAL</option>
-            </select>
+            <label class="form-label d-block">Turno</label>
+            {% set turnos_list = ['1º TURNO', '2º TURNO', '3º TURNO', 'COMERCIAL'] %}
+            {% for turno in turnos_list %}
+                <div class="form-check form-check-inline">
+                    <input class="form-check-input" type="checkbox" name="filtro_turno" value="{{ turno }}"
+                        id="turno_{{ loop.index }}"
+                        {% if filtro_turno and turno in filtro_turno %}checked{% endif %}>
+                    <label class="form-check-label" for="turno_{{ loop.index }}">{{ turno }}</label>
+                </div>
+            {% endfor %}
         </div>
         <div class="col-md-2">
             <label for="filtro_data" class="form-label">Data</label>
