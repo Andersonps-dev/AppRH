@@ -272,6 +272,7 @@ def colaboradores():
 
     empresas = Empresa.query.order_by(Empresa.nome).all()
     setores = Setor.query.order_by(Setor.nome).all()
+    gestores = [g[0] for g in db.session.query(Colaborador.gestor).filter(Colaborador.gestor != None).distinct().order_by(Colaborador.gestor).all()]
     return render_template(
         'colaboradores.html',
         user=g.user,
@@ -283,7 +284,9 @@ def colaboradores():
         filtro_status=filtro_status,
         filtro_setor=filtro_setor,
         filtro_gestor=filtro_gestor,
-        filtro_turno=filtro_turno
+        filtro_turno=filtro_turno,
+        status_list=status_list,
+        gestores=gestores
     )
 
 @app.route('/export_colaboradores')
@@ -582,6 +585,7 @@ def lista_presenca():
     setores = Setor.query.order_by(Setor.nome).all()
     turnos = ['1º TURNO', '2º TURNO', 'COMERCIAL', '3º TURNO']
 
+    gestores = [g[0] for g in db.session.query(Colaborador.gestor).filter(Colaborador.gestor != None).distinct().order_by(Colaborador.gestor).all()]
     return render_template(
         'lista_presenca.html',
         user=user,
@@ -595,7 +599,8 @@ def lista_presenca():
         filtro_empresa=filtro_empresa,
         filtro_setor=filtro_setor,
         filtro_turno=filtro_turno,
-        filtro_gestor=filtro_gestor
+        filtro_gestor=filtro_gestor,
+        gestores=gestores
     )
 
 @app.route('/minhas_presencas', methods=['GET', 'POST'])
@@ -669,6 +674,7 @@ def minhas_presencas():
                                 filtro_data=filtro_data,
                                 filtro_gestor=filtro_gestor))
 
+    gestores = [g[0] for g in db.session.query(Colaborador.gestor).filter(Colaborador.gestor != None).distinct().order_by(Colaborador.gestor).all()]
     return render_template(
         'minhas_presencas.html',
         user=g.user,
@@ -680,7 +686,8 @@ def minhas_presencas():
         filtro_data=filtro_data,
         filtro_gestor=filtro_gestor,
         empresas=empresas,
-        setores=setores
+        setores=setores,
+        gestores=gestores
     )
 
 @app.route('/export_minhas_presencas')

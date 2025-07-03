@@ -42,7 +42,7 @@
 <div class="container-fluid mt-3">
 <div class="card shadow p-4 mb-4">
     <h2 class="mb-4">Lista de Presença</h2>
-    <form method="get" class="row align-items-end g-2 mb-3">
+    <form method="get" class="row align-items-end g-2 mb-3" autocomplete="off">
         <div class="col-12 col-md-3">
             <label for="data" class="form-label">Data:</label>
             <input type="date" id="data" name="data" class="form-control"
@@ -79,14 +79,22 @@
         </div>
         <div class="col-12 col-md-2">
             <label for="filtro_gestor" class="form-label">Gestor:</label>
-            <input type="text" id="filtro_gestor" name="filtro_gestor" class="form-control" value="{{ filtro_gestor }}">
+            <input type="text" id="filtro_gestor" name="filtro_gestor" class="form-control" value="{{ filtro_gestor }}" list="gestoresList" autocomplete="off">
+            <datalist id="gestoresList">
+                {% for gestor in gestores %}
+                    {% if gestor %}
+                        <option value="{{ gestor }}">
+                    {% endif %}
+                {% endfor %}
+            </datalist>
         </div>
         <div class="col-12 col-md-2">
             <label for="filtro_nome" class="form-label">Colaborador:</label>
-            <input type="text" id="filtro_nome" name="filtro_nome" class="form-control" value="{{ filtro_nome }}">
+            <input type="text" id="filtro_nome" name="filtro_nome" class="form-control" value="{{ filtro_nome }}" autocomplete="off">
         </div>
-        <div class="col-12 col-md-2 d-flex align-items-end">
+        <div class="col-12 col-md-2 d-flex align-items-end gap-2">
             <button type="submit" class="btn btn-primary w-100">Filtrar</button>
+            <a href="{{ url_for('lista_presenca') }}" class="btn btn-secondary w-100">Limpar Filtros</a>
         </div>
     </form>
     {% with messages = get_flashed_messages() %}

@@ -28,9 +28,9 @@
             ) }}{% for t in filtro_turno %}&filtro_turno={{ t }}{% endfor %}" class="btn btn-success">Exportar Excel</a>
             </div>
         </div>
-        <form class="row g-2 mb-3" method="get">
+        <form class="row g-2 mb-3" method="get" autocomplete="off">
             <div class="col-md-2">
-                <input type="text" name="filtro_nome" class="form-control" placeholder="Filtrar por nome" value="{{ filtro_nome }}">
+                <input type="text" name="filtro_nome" class="form-control" placeholder="Filtrar por nome" value="{{ filtro_nome }}" autocomplete="off">
             </div>
             <div class="col-md-2">
                 <select name="filtro_empresa" class="form-select">
@@ -57,7 +57,14 @@
                 </select>
             </div>
             <div class="col-md-2">
-                <input type="text" name="filtro_gestor" class="form-control" placeholder="Filtrar por gestor" value="{{ filtro_gestor }}">
+                <input type="text" name="filtro_gestor" class="form-control" placeholder="Filtrar por gestor" value="{{ filtro_gestor }}" list="gestoresList" autocomplete="off">
+                <datalist id="gestoresList">
+                    {% for gestor in gestores %}
+                        {% if gestor %}
+                            <option value="{{ gestor }}">
+                        {% endif %}
+                    {% endfor %}
+                </datalist>
             </div>
             <div class="col-md-2">
                 <label class="form-label d-block">Turno:</label>

@@ -12,14 +12,21 @@
 {% block content %}
 <div class="card shadow p-4 mb-4">
     <h2 class="mb-4">Minhas Presenças Lançadas</h2>
-    <form method="get" class="row align-items-end g-2 mb-3">
+    <form method="get" class="row align-items-end g-2 mb-3" autocomplete="off">
         <div class="col-md-3">
             <label for="filtro_nome" class="form-label">Nome do Colaborador</label>
-            <input type="text" class="form-control" id="filtro_nome" name="filtro_nome" value="{{ filtro_nome or '' }}" placeholder="Filtrar por nome">
+            <input type="text" class="form-control" id="filtro_nome" name="filtro_nome" value="{{ filtro_nome or '' }}" placeholder="Filtrar por nome" autocomplete="off">
         </div>
         <div class="col-md-2">
             <label for="filtro_gestor" class="form-label">Gestor</label>
-            <input type="text" class="form-control" id="filtro_gestor" name="filtro_gestor" value="{{ filtro_gestor or '' }}" placeholder="Filtrar por gestor">
+            <input type="text" class="form-control" id="filtro_gestor" name="filtro_gestor" value="{{ filtro_gestor or '' }}" placeholder="Filtrar por gestor" list="gestoresList" autocomplete="off">
+            <datalist id="gestoresList">
+                {% for gestor in gestores %}
+                    {% if gestor %}
+                        <option value="{{ gestor }}">
+                    {% endif %}
+                {% endfor %}
+            </datalist>
         </div>
         <div class="col-md-2">
             <label for="filtro_empresa" class="form-label">Empresa</label>
