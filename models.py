@@ -27,6 +27,8 @@ class Permission(db.Model):
     can_access_colaboradores = db.Column(db.Boolean, default=False)
     can_access_lista_presenca = db.Column(db.Boolean, default=False)
     can_access_permissions = db.Column(db.Boolean, default=False)
+    can_access_empresas = db.Column(db.Boolean, default=False)  # <-- Adicione esta linha
+    can_access_setores = db.Column(db.Boolean, default=False)   # <-- Adicione esta linha
 
 class Colaborador(db.Model):
     id = db.Column(db.Integer, primary_key=True)

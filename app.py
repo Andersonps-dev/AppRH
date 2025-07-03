@@ -43,6 +43,8 @@ PERMISSIONS = [
     ('can_access_colaboradores', 'Acessa Colaboradores'),
     ('can_access_lista_presenca', 'Acessa Lista de Presença'),
     ('can_access_permissions', 'Acessa Permissões'),
+    ('can_access_empresas', 'Acessa Empresas'),
+    ('can_access_setores', 'Acessa Setores'),
 ]
 
 # Adiciona cabeçalhos anti-cache
@@ -748,9 +750,9 @@ def export_minhas_presencas():
 @app.route('/empresas', methods=['GET', 'POST'])
 @login_required
 def empresas():
-    if g.user is None:
-        flash('Faça login para acessar esta página.')
-        return redirect(url_for('login'))
+    if not has_permission(g.user, 'can_access_empresas'):
+        flash('Sem acesso.')
+        return redirect(url_for('index'))
     if request.method == 'POST':
         nome = request.form.get('nome')
         if nome and not Empresa.query.filter_by(nome=nome).first():
@@ -775,9 +777,9 @@ def delete_empresa(id):
 @app.route('/setores', methods=['GET', 'POST'])
 @login_required
 def setores():
-    if g.user is None:
-        flash('Faça login para acessar esta página.')
-        return redirect(url_for('login'))
+    if not has_permission(g.user, 'can_access_setores'):
+        flash('Sem acesso.')
+        return redirect(url_for('index'))
     if request.method == 'POST':
         nome = request.form.get('nome')
         if nome and not Setor.query.filter_by(nome=nome).first():
