@@ -612,6 +612,7 @@ def minhas_presencas():
 
     user = g.user
 
+    # Adiciona filtro_status
     if request.method == 'POST':
         filtro_turno = request.form.getlist('filtro_turno')
         filtro_nome = request.form.get('filtro_nome', '')
@@ -619,6 +620,7 @@ def minhas_presencas():
         filtro_setor = request.form.get('filtro_setor', '')
         filtro_data = request.form.get('filtro_data', '')
         filtro_gestor = request.form.get('filtro_gestor', '')
+        filtro_status = request.form.get('filtro_status', '')
     else:
         filtro_turno = request.args.getlist('filtro_turno')
         filtro_nome = request.args.get('filtro_nome', '')
@@ -626,6 +628,7 @@ def minhas_presencas():
         filtro_setor = request.args.get('filtro_setor', '')
         filtro_data = request.args.get('filtro_data', '')
         filtro_gestor = request.args.get('filtro_gestor', '')
+        filtro_status = request.args.get('filtro_status', '')
 
     empresas = Empresa.query.order_by(Empresa.nome).all()
     setores = Setor.query.order_by(Setor.nome).all()
@@ -656,25 +659,40 @@ def minhas_presencas():
             pass
     if filtro_gestor:
         query = query.filter(Colaborador.gestor.ilike(f'%{filtro_gestor}%'))
+    if filtro_status:
+        query = query.filter(Presenca.status == filtro_status)
 
     presencas = query.order_by(Presenca.data.desc()).all()
 
     if request.method == 'POST':
+        # Atualiza status das presenças
         for p in presencas:
             novo_status = request.form.get(f'status_{p.id}')
             if novo_status and novo_status != p.status:
                 p.status = novo_status
         db.session.commit()
         flash('Presenças atualizadas com sucesso!')
+        # Redireciona mantendo todos os filtros, inclusive múltiplos turnos
         return redirect(url_for('minhas_presencas',
                                 filtro_nome=filtro_nome,
                                 filtro_empresa=filtro_empresa,
                                 filtro_setor=filtro_setor,
                                 filtro_turno=filtro_turno,
                                 filtro_data=filtro_data,
-                                filtro_gestor=filtro_gestor))
+                                filtro_gestor=filtro_gestor,
+                                filtro_status=filtro_status))
 
     gestores = [g[0] for g in db.session.query(Colaborador.gestor).filter(Colaborador.gestor != None).distinct().order_by(Colaborador.gestor).all()]
+    status_list = [
+        ('ausente', 'Ausente'),
+        ('presente', 'Presente'),
+        ('atestado', 'Atestado'),
+        ('folga', 'Folga'),
+        ('dayoff', 'Dayoff'),
+        ('falta_injustificada', 'Falta Injustificada'),
+        ('ferias', 'Férias'),
+        ('licenca_maternidade', 'Licença Maternidade')
+    ]
     return render_template(
         'minhas_presencas.html',
         user=g.user,
@@ -685,9 +703,11 @@ def minhas_presencas():
         filtro_turno=filtro_turno,
         filtro_data=filtro_data,
         filtro_gestor=filtro_gestor,
+        filtro_status=filtro_status,
         empresas=empresas,
         setores=setores,
-        gestores=gestores
+        gestores=gestores,
+        status_list=status_list
     )
 
 @app.route('/export_minhas_presencas')
